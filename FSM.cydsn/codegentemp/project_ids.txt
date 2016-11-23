@@ -1,0 +1,7 @@
+C:\Users\Nick\Documents\PSoC Creator\FSM.cywrk\FSM\FSM.cydsn\FSM.cyprj|bd69169c-0c59-4094-8f69-9097fc4d45b1
+C:\Program Files (x86)\Cypress\PSoC Creator\4.0\PSoC Creator\psoc\content\default\CyAnnotationLibrary\CyAnnotationLibrary.cylib\CyAnnotationLibrary.cyprj|838c7b55-c29a-4719-9951-764fb82a372c
+C:\Program Files (x86)\Cypress\PSoC Creator\4.0\PSoC Creator\psoc\content\default\CyReferenceLibrary\CyReferenceLibrary.cylib\CyReferenceLibrary.cyprj|d9baf73a-435e-42e7-bf1f-9a1669ef4f1f
+C:\Program Files (x86)\Cypress\PSoC Creator\4.0\PSoC Creator\psoc\content\cycomponentlibraryupdates\CyComponentLibraryUpdates.cylib\CyComponentLibraryUpdates.cyprj|3fd626bf-62f7-448a-a340-20a3a38dce24
+C:\Program Files (x86)\Cypress\PSoC Creator\4.0\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CyComponentLibrary.cyprj|8a612733-0942-4b12-b2fe-a70943c10325
+C:\Program Files (x86)\Cypress\PSoC Creator\4.0\PSoC Creator\psoc\content\cyprimitives\CyPrimitives.cylib\CyPrimitives.cyprj|decbdd62-281c-4937-830f-5c9cfafdb62e
+C:\Users\Nick\Documents\PSoC Creator\FSM.cywrk\FSM\SCB_UartComm01.cydsn\SCB_UartComm01.cyprj|6919c063-fe2c-44b9-bc6a-f4bb9ae5f8f8

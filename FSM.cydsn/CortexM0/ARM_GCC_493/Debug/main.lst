@@ -1,0 +1,1953 @@
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 1
+
+
+   1              		.cpu cortex-m0
+   2              		.fpu softvfp
+   3              		.eabi_attribute 20, 1
+   4              		.eabi_attribute 21, 1
+   5              		.eabi_attribute 23, 3
+   6              		.eabi_attribute 24, 1
+   7              		.eabi_attribute 25, 1
+   8              		.eabi_attribute 26, 1
+   9              		.eabi_attribute 30, 6
+  10              		.eabi_attribute 34, 0
+  11              		.eabi_attribute 18, 4
+  12              		.code	16
+  13              		.file	"main.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.comm	activeLed,1,1
+  18              		.comm	sample_lines,1,1
+  19              		.section	.text.InterruptHandler,"ax",%progbits
+  20              		.align	2
+  21              		.global	InterruptHandler
+  22              		.code	16
+  23              		.thumb_func
+  24              		.type	InterruptHandler, %function
+  25              	InterruptHandler:
+  26              	.LFB37:
+  27              		.file 1 "main.c"
+   1:main.c        **** /*******************************************************************************
+   2:main.c        **** * File Name: main.c
+   3:main.c        **** *
+   4:main.c        **** * Version: 3.00
+   5:main.c        **** *
+   6:main.c        **** * Description:
+   7:main.c        **** *  This is the source code for the datasheet example of the TCPWM (Timer / 
+   8:main.c        **** *  Counter mode) component.
+   9:main.c        **** *
+  10:main.c        **** ********************************************************************************
+  11:main.c        **** * Copyright 2013-2015, Cypress Semiconductor Corporation. All rights reserved.
+  12:main.c        **** * This software is owned by Cypress Semiconductor Corporation and is protected
+  13:main.c        **** * by and subject to worldwide patent and copyright laws and treaties.
+  14:main.c        **** * Therefore, you may use this software only as provided in the license agreement
+  15:main.c        **** * accompanying the software package from which you obtained this software.
+  16:main.c        **** * CYPRESS AND ITS SUPPLIERS MAKE NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  17:main.c        **** * WITH REGARD TO THIS SOFTWARE, INCLUDING, BUT NOT LIMITED TO, NONINFRINGEMENT,
+  18:main.c        **** * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  19:main.c        **** *******************************************************************************/
+  20:main.c        **** 
+  21:main.c        **** #include <project.h>
+  22:main.c        **** #include <stdlib.h>
+  23:main.c        **** 
+  24:main.c        **** #include "filter.h"
+  25:main.c        **** #include "print.h"
+  26:main.c        **** #include "queue.h"
+  27:main.c        **** 
+  28:main.c        **** /* LED control defines (active low)*/
+  29:main.c        **** #define LIGHT_OFF                       (1u)
+  30:main.c        **** #define LIGHT_ON                        (0u)
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 2
+
+
+  31:main.c        **** #define SIZE 2000U
+  32:main.c        **** 
+  33:main.c        **** /* Selects the active blinking LED */
+  34:main.c        **** uint8 activeLed;
+  35:main.c        **** // Flag to indicate when to sample digital lines.
+  36:main.c        **** uint8 sample_lines;
+  37:main.c        **** 
+  38:main.c        **** 
+  39:main.c        **** /*******************************************************************************
+  40:main.c        **** * Defines the interrupt service routine and allocates a vector to the interrupt.
+  41:main.c        **** * We use one handler for both the Capture and Terminal Count interrupts
+  42:main.c        **** * We toggle the active LED upon each Terminal Count interrupt
+  43:main.c        **** * We toggle the color (active LED) between blue and green upon each Capture 
+  44:main.c        **** * interrupt
+  45:main.c        **** ********************************************************************************/
+  46:main.c        **** 
+  47:main.c        **** CY_ISR(InterruptHandler)
+  48:main.c        **** {    
+  28              		.loc 1 48 0
+  29              		.cfi_startproc
+  30 0000 80B5     		push	{r7, lr}
+  31              		.cfi_def_cfa_offset 8
+  32              		.cfi_offset 7, -8
+  33              		.cfi_offset 14, -4
+  34 0002 00AF     		add	r7, sp, #0
+  35              		.cfi_def_cfa_register 7
+  49:main.c        ****     if (Timer_INTR_MASK_TC == Timer_GetInterruptSource()) {
+  36              		.loc 1 49 0
+  37 0004 FFF7FEFF 		bl	Timer_GetInterruptSource
+  38 0008 031E     		sub	r3, r0, #0
+  39 000a 012B     		cmp	r3, #1
+  40 000c 05D1     		bne	.L1
+  50:main.c        ****         // Timer has overflowed, 1ms has elapsed.
+  51:main.c        ****         // Clear interrupt, then set flag to execute finite state control loop.
+  52:main.c        ****         Timer_ClearInterrupt(Timer_INTR_MASK_TC);
+  41              		.loc 1 52 0
+  42 000e 0120     		mov	r0, #1
+  43 0010 FFF7FEFF 		bl	Timer_ClearInterrupt
+  53:main.c        ****         sample_lines = 1;        
+  44              		.loc 1 53 0
+  45 0014 024B     		ldr	r3, .L3
+  46 0016 0122     		mov	r2, #1
+  47 0018 1A70     		strb	r2, [r3]
+  48              	.L1:
+  54:main.c        ****     }
+  55:main.c        **** }
+  49              		.loc 1 55 0
+  50 001a BD46     		mov	sp, r7
+  51              		@ sp needed
+  52 001c 80BD     		pop	{r7, pc}
+  53              	.L4:
+  54 001e C046     		.align	2
+  55              	.L3:
+  56 0020 00000000 		.word	sample_lines
+  57              		.cfi_endproc
+  58              	.LFE37:
+  59              		.size	InterruptHandler, .-InterruptHandler
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 3
+
+
+  60              		.section	.rodata
+  61              		.align	2
+  62              	.LC2:
+  63 0000 0D0A5465 		.ascii	"\015\012Test Line\015\012\000"
+  63      7374204C 
+  63      696E650D 
+  63      0A00
+  64 000e 0000     		.align	2
+  65              	.LC4:
+  66 0010 0D0A00   		.ascii	"\015\012\000"
+  67 0013 00       		.align	2
+  68              	.LC8:
+  69 0014 53312000 		.ascii	"S1 \000"
+  70              		.align	2
+  71              	.LC10:
+  72 0018 2000     		.ascii	" \000"
+  73 001a 0000     		.align	2
+  74              	.LC12:
+  75 001c 53322000 		.ascii	"S2 \000"
+  76              		.align	2
+  77              	.LC14:
+  78 0020 53332000 		.ascii	"S3 \000"
+  79              		.align	2
+  80              	.LC16:
+  81 0024 53697265 		.ascii	"Siren Detected\015\012\000"
+  81      6E204465 
+  81      74656374 
+  81      65640D0A 
+  81      00
+  82 0035 000000   		.align	2
+  83              	.LC18:
+  84 0038 46697265 		.ascii	"Fire Alarm Detected\015\012\000"
+  84      20416C61 
+  84      726D2044 
+  84      65746563 
+  84      7465640D 
+  85              		.section	.text.main,"ax",%progbits
+  86              		.align	2
+  87              		.global	main
+  88              		.code	16
+  89              		.thumb_func
+  90              		.type	main, %function
+  91              	main:
+  92              	.LFB38:
+  56:main.c        **** 
+  57:main.c        **** 
+  58:main.c        **** 
+  59:main.c        **** int main()
+  60:main.c        **** {   
+  93              		.loc 1 60 0
+  94              		.cfi_startproc
+  95 0000 80B5     		push	{r7, lr}
+  96              		.cfi_def_cfa_offset 8
+  97              		.cfi_offset 7, -8
+  98              		.cfi_offset 14, -4
+  99 0002 98B0     		sub	sp, sp, #96
+ 100              		.cfi_def_cfa_offset 104
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 4
+
+
+ 101 0004 00AF     		add	r7, sp, #0
+ 102              		.cfi_def_cfa_register 7
+  61:main.c        ****     #if (CY_PSOC4_4000)
+  62:main.c        ****         CySysWdtDisable();
+  63:main.c        ****     #endif /* (CY_PSOC4_4000) */
+  64:main.c        ****        
+  65:main.c        ****     /* Enable global interrupt */
+  66:main.c        ****     CyGlobalIntEnable;
+ 103              		.loc 1 66 0
+ 104              	@ 66 "main.c" 1
+ 105 0006 62B6     		CPSIE   i
+ 106              	@ 0 "" 2
+  67:main.c        ****     
+  68:main.c        ****     /* Enable interrupt component connected to interrupt */
+  69:main.c        ****     TC_CC_ISR_StartEx(InterruptHandler);
+ 107              		.loc 1 69 0
+ 108              		.code	16
+ 109 0008 DC4B     		ldr	r3, .L31
+ 110 000a 181C     		mov	r0, r3
+ 111 000c FFF7FEFF 		bl	TC_CC_ISR_StartEx
+  70:main.c        **** 
+  71:main.c        ****     /* Start components */
+  72:main.c        ****     Timer_Start();
+ 112              		.loc 1 72 0
+ 113 0010 FFF7FEFF 		bl	Timer_Start
+  73:main.c        ****     
+  74:main.c        ****     
+  75:main.c        ****     // The state of the FSM.
+  76:main.c        ****     uint8 state = 0;
+ 114              		.loc 1 76 0
+ 115 0014 5F23     		mov	r3, #95
+ 116 0016 FB18     		add	r3, r7, r3
+ 117 0018 0022     		mov	r2, #0
+ 118 001a 1A70     		strb	r2, [r3]
+  77:main.c        ****     
+  78:main.c        ****     UART_1_Start();
+ 119              		.loc 1 78 0
+ 120 001c FFF7FEFF 		bl	UART_1_Start
+  79:main.c        **** 
+  80:main.c        ****     UART_1_UartPutString("\r\nTest Line\r\n");
+ 121              		.loc 1 80 0
+ 122 0020 D74B     		ldr	r3, .L31+4
+ 123 0022 181C     		mov	r0, r3
+ 124 0024 FFF7FEFF 		bl	UART_1_UartPutString
+  81:main.c        ****     print_int(123);
+ 125              		.loc 1 81 0
+ 126 0028 7B20     		mov	r0, #123
+ 127 002a FFF7FEFF 		bl	print_int
+  82:main.c        ****     UART_1_UartPutString("\r\n");
+ 128              		.loc 1 82 0
+ 129 002e D54B     		ldr	r3, .L31+8
+ 130 0030 181C     		mov	r0, r3
+ 131 0032 FFF7FEFF 		bl	UART_1_UartPutString
+  83:main.c        ****     print_int(12);
+ 132              		.loc 1 83 0
+ 133 0036 0C20     		mov	r0, #12
+ 134 0038 FFF7FEFF 		bl	print_int
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 5
+
+
+  84:main.c        ****     UART_1_UartPutString("\r\n");
+ 135              		.loc 1 84 0
+ 136 003c D14B     		ldr	r3, .L31+8
+ 137 003e 181C     		mov	r0, r3
+ 138 0040 FFF7FEFF 		bl	UART_1_UartPutString
+  85:main.c        ****     print_int(100);
+ 139              		.loc 1 85 0
+ 140 0044 6420     		mov	r0, #100
+ 141 0046 FFF7FEFF 		bl	print_int
+  86:main.c        ****     UART_1_UartPutString("\r\n");
+ 142              		.loc 1 86 0
+ 143 004a CE4B     		ldr	r3, .L31+8
+ 144 004c 181C     		mov	r0, r3
+ 145 004e FFF7FEFF 		bl	UART_1_UartPutString
+  87:main.c        ****     print_int(1901);
+ 146              		.loc 1 87 0
+ 147 0052 CD4B     		ldr	r3, .L31+12
+ 148 0054 181C     		mov	r0, r3
+ 149 0056 FFF7FEFF 		bl	print_int
+  88:main.c        ****     UART_1_UartPutString("\r\n");
+ 150              		.loc 1 88 0
+ 151 005a CA4B     		ldr	r3, .L31+8
+ 152 005c 181C     		mov	r0, r3
+ 153 005e FFF7FEFF 		bl	UART_1_UartPutString
+  89:main.c        ****     print_int(0);
+ 154              		.loc 1 89 0
+ 155 0062 0020     		mov	r0, #0
+ 156 0064 FFF7FEFF 		bl	print_int
+  90:main.c        ****     UART_1_UartPutString("\r\n");
+ 157              		.loc 1 90 0
+ 158 0068 C64B     		ldr	r3, .L31+8
+ 159 006a 181C     		mov	r0, r3
+ 160 006c FFF7FEFF 		bl	UART_1_UartPutString
+  91:main.c        ****     
+  92:main.c        ****     queue_t low_prev;
+  93:main.c        ****     queue_t med_prev;
+  94:main.c        ****     queue_t high_prev;
+  95:main.c        ****     queue_t fire_prev;
+  96:main.c        ****     queue_t slope_detect;
+  97:main.c        ****     
+  98:main.c        ****     int low_count;
+  99:main.c        ****     int med_count;
+ 100:main.c        ****     int high_count;
+ 101:main.c        ****     int fire_count;
+ 102:main.c        ****     int liveness_count;
+ 103:main.c        ****     int prev_low_count;
+ 104:main.c        ****     
+ 105:main.c        ****     
+ 106:main.c        ****     int i = 0;
+ 161              		.loc 1 106 0
+ 162 0070 0023     		mov	r3, #0
+ 163 0072 7B64     		str	r3, [r7, #68]
+ 107:main.c        ****     
+ 108:main.c        ****     init_queue(&low_prev);
+ 164              		.loc 1 108 0
+ 165 0074 3423     		mov	r3, #52
+ 166 0076 FB18     		add	r3, r7, r3
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 6
+
+
+ 167 0078 181C     		mov	r0, r3
+ 168 007a FFF7FEFF 		bl	init_queue
+ 109:main.c        ****     init_queue(&med_prev);
+ 169              		.loc 1 109 0
+ 170 007e 2823     		mov	r3, #40
+ 171 0080 FB18     		add	r3, r7, r3
+ 172 0082 181C     		mov	r0, r3
+ 173 0084 FFF7FEFF 		bl	init_queue
+ 110:main.c        ****     init_queue(&high_prev);
+ 174              		.loc 1 110 0
+ 175 0088 1C23     		mov	r3, #28
+ 176 008a FB18     		add	r3, r7, r3
+ 177 008c 181C     		mov	r0, r3
+ 178 008e FFF7FEFF 		bl	init_queue
+ 111:main.c        ****     init_queue(&fire_prev);
+ 179              		.loc 1 111 0
+ 180 0092 1023     		mov	r3, #16
+ 181 0094 FB18     		add	r3, r7, r3
+ 182 0096 181C     		mov	r0, r3
+ 183 0098 FFF7FEFF 		bl	init_queue
+ 112:main.c        ****     init_queue(&slope_detect);
+ 184              		.loc 1 112 0
+ 185 009c 3B1D     		add	r3, r7, #4
+ 186 009e 181C     		mov	r0, r3
+ 187 00a0 FFF7FEFF 		bl	init_queue
+ 188              	.L27:
+ 113:main.c        ****     
+ 114:main.c        ****     for(;;) {
+ 115:main.c        ****         if (sample_lines) {
+ 189              		.loc 1 115 0
+ 190 00a4 B94B     		ldr	r3, .L31+16
+ 191 00a6 1B78     		ldrb	r3, [r3]
+ 192 00a8 002B     		cmp	r3, #0
+ 193 00aa 00D1     		bne	.LCB111
+ 194 00ac 3AE2     		b	.L6	@long jump
+ 195              	.LCB111:
+ 116:main.c        ****             sample_lines = 0;
+ 196              		.loc 1 116 0
+ 197 00ae B74B     		ldr	r3, .L31+16
+ 198 00b0 0022     		mov	r2, #0
+ 199 00b2 1A70     		strb	r2, [r3]
+ 117:main.c        ****             
+ 118:main.c        ****             switch(state) {
+ 200              		.loc 1 118 0
+ 201 00b4 5F23     		mov	r3, #95
+ 202 00b6 FB18     		add	r3, r7, r3
+ 203 00b8 1B78     		ldrb	r3, [r3]
+ 204 00ba 062B     		cmp	r3, #6
+ 205 00bc 00D9     		bls	.LCB119
+ 206 00be 2EE2     		b	.L28	@long jump
+ 207              	.LCB119:
+ 208 00c0 9A00     		lsl	r2, r3, #2
+ 209 00c2 B34B     		ldr	r3, .L31+20
+ 210 00c4 D318     		add	r3, r2, r3
+ 211 00c6 1B68     		ldr	r3, [r3]
+ 212 00c8 9F46     		mov	pc, r3
+ 213              		.section	.rodata
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 7
+
+
+ 214 004e 0000     		.align	2
+ 215              	.L9:
+ 216 0050 CA000000 		.word	.L8
+ 217 0054 F6000000 		.word	.L10
+ 218 0058 66020000 		.word	.L11
+ 219 005c A0030000 		.word	.L12
+ 220 0060 C8040000 		.word	.L30
+ 221 0064 EC040000 		.word	.L14
+ 222 0068 22050000 		.word	.L29
+ 223              		.section	.text.main
+ 224              	.L8:
+ 119:main.c        ****                 
+ 120:main.c        ****                 /* This is the state that is entered upon reset.
+ 121:main.c        ****                  * In the future, this state should be returned to upon 
+ 122:main.c        ****                  * event detection if the user applies an input (possibly a
+ 123:main.c        ****                  * pushbutton to start with, and a BLE signal in the future).
+ 124:main.c        ****                  */
+ 125:main.c        ****                 case 0:
+ 126:main.c        ****                     low_count = 0;
+ 225              		.loc 1 126 0
+ 226 00ca 0023     		mov	r3, #0
+ 227 00cc BB65     		str	r3, [r7, #88]
+ 127:main.c        ****                     med_count = 0;
+ 228              		.loc 1 127 0
+ 229 00ce 0023     		mov	r3, #0
+ 230 00d0 7B65     		str	r3, [r7, #84]
+ 128:main.c        ****                     high_count = 0;
+ 231              		.loc 1 128 0
+ 232 00d2 0023     		mov	r3, #0
+ 233 00d4 3B65     		str	r3, [r7, #80]
+ 129:main.c        ****                     fire_count = 0;
+ 234              		.loc 1 129 0
+ 235 00d6 0023     		mov	r3, #0
+ 236 00d8 FB64     		str	r3, [r7, #76]
+ 130:main.c        ****                     LED_GREEN_Write(LIGHT_OFF);
+ 237              		.loc 1 130 0
+ 238 00da 0120     		mov	r0, #1
+ 239 00dc FFF7FEFF 		bl	LED_GREEN_Write
+ 131:main.c        ****                     LED_BLUE_Write(LIGHT_OFF);
+ 240              		.loc 1 131 0
+ 241 00e0 0120     		mov	r0, #1
+ 242 00e2 FFF7FEFF 		bl	LED_BLUE_Write
+ 132:main.c        ****                     LED_RED_Write(LIGHT_OFF);
+ 243              		.loc 1 132 0
+ 244 00e6 0120     		mov	r0, #1
+ 245 00e8 FFF7FEFF 		bl	LED_RED_Write
+ 133:main.c        ****                     state = 1;
+ 246              		.loc 1 133 0
+ 247 00ec 5F23     		mov	r3, #95
+ 248 00ee FB18     		add	r3, r7, r3
+ 249 00f0 0122     		mov	r2, #1
+ 250 00f2 1A70     		strb	r2, [r3]
+ 134:main.c        ****                     break;
+ 251              		.loc 1 134 0
+ 252 00f4 16E2     		b	.L6
+ 253              	.L10:
+ 135:main.c        ****                 
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 8
+
+
+ 136:main.c        ****                 /* In this state, keep a running count of each filtered input.
+ 137:main.c        ****                  * If the counts exceed certain thresholds, proceed to either the
+ 138:main.c        ****                  * alarm recognition state or the siren recognition state.
+ 139:main.c        ****                  */
+ 140:main.c        ****                 // TODO break up count into helper functions, make new header file.
+ 141:main.c        ****                 case 1:
+ 142:main.c        ****                     prev_low_count = low_count;
+ 254              		.loc 1 142 0
+ 255 00f6 BB6D     		ldr	r3, [r7, #88]
+ 256 00f8 3B64     		str	r3, [r7, #64]
+ 143:main.c        ****                     low_count = filter_count(LOW_FILTER_INPUT_Read(), &low_prev, low_count);
+ 257              		.loc 1 143 0
+ 258 00fa FFF7FEFF 		bl	LOW_FILTER_INPUT_Read
+ 259 00fe 031C     		mov	r3, r0
+ 260 0100 DBB2     		uxtb	r3, r3
+ 261 0102 59B2     		sxtb	r1, r3
+ 262 0104 3423     		mov	r3, #52
+ 263 0106 FA18     		add	r2, r7, r3
+ 264 0108 BB6D     		ldr	r3, [r7, #88]
+ 265 010a 081C     		mov	r0, r1
+ 266 010c 111C     		mov	r1, r2
+ 267 010e 1A1C     		mov	r2, r3
+ 268 0110 FFF7FEFF 		bl	filter_count
+ 269 0114 031C     		mov	r3, r0
+ 270 0116 BB65     		str	r3, [r7, #88]
+ 144:main.c        ****                     med_count = filter_count(MED_FILTER_INPUT_Read(), &med_prev, med_count);
+ 271              		.loc 1 144 0
+ 272 0118 FFF7FEFF 		bl	MED_FILTER_INPUT_Read
+ 273 011c 031C     		mov	r3, r0
+ 274 011e DBB2     		uxtb	r3, r3
+ 275 0120 59B2     		sxtb	r1, r3
+ 276 0122 2823     		mov	r3, #40
+ 277 0124 FA18     		add	r2, r7, r3
+ 278 0126 7B6D     		ldr	r3, [r7, #84]
+ 279 0128 081C     		mov	r0, r1
+ 280 012a 111C     		mov	r1, r2
+ 281 012c 1A1C     		mov	r2, r3
+ 282 012e FFF7FEFF 		bl	filter_count
+ 283 0132 031C     		mov	r3, r0
+ 284 0134 7B65     		str	r3, [r7, #84]
+ 145:main.c        ****                     high_count = filter_count(HIGH_FILTER_INPUT_Read(), &high_prev, high_count);
+ 285              		.loc 1 145 0
+ 286 0136 FFF7FEFF 		bl	HIGH_FILTER_INPUT_Read
+ 287 013a 031C     		mov	r3, r0
+ 288 013c DBB2     		uxtb	r3, r3
+ 289 013e 59B2     		sxtb	r1, r3
+ 290 0140 1C23     		mov	r3, #28
+ 291 0142 FA18     		add	r2, r7, r3
+ 292 0144 3B6D     		ldr	r3, [r7, #80]
+ 293 0146 081C     		mov	r0, r1
+ 294 0148 111C     		mov	r1, r2
+ 295 014a 1A1C     		mov	r2, r3
+ 296 014c FFF7FEFF 		bl	filter_count
+ 297 0150 031C     		mov	r3, r0
+ 298 0152 3B65     		str	r3, [r7, #80]
+ 146:main.c        ****                     fire_count = filter_count(FIRE_FILTER_INPUT_Read(), &fire_prev, fire_count);
+ 299              		.loc 1 146 0
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 9
+
+
+ 300 0154 FFF7FEFF 		bl	FIRE_FILTER_INPUT_Read
+ 301 0158 031C     		mov	r3, r0
+ 302 015a DBB2     		uxtb	r3, r3
+ 303 015c 59B2     		sxtb	r1, r3
+ 304 015e 1023     		mov	r3, #16
+ 305 0160 FA18     		add	r2, r7, r3
+ 306 0162 FB6C     		ldr	r3, [r7, #76]
+ 307 0164 081C     		mov	r0, r1
+ 308 0166 111C     		mov	r1, r2
+ 309 0168 1A1C     		mov	r2, r3
+ 310 016a FFF7FEFF 		bl	filter_count
+ 311 016e 031C     		mov	r3, r0
+ 312 0170 FB64     		str	r3, [r7, #76]
+ 147:main.c        ****                     push(&slope_detect, low_count - prev_low_count);
+ 313              		.loc 1 147 0
+ 314 0172 BB6D     		ldr	r3, [r7, #88]
+ 315 0174 DAB2     		uxtb	r2, r3
+ 316 0176 3B6C     		ldr	r3, [r7, #64]
+ 317 0178 DBB2     		uxtb	r3, r3
+ 318 017a D31A     		sub	r3, r2, r3
+ 319 017c DBB2     		uxtb	r3, r3
+ 320 017e DBB2     		uxtb	r3, r3
+ 321 0180 3A1D     		add	r2, r7, #4
+ 322 0182 5BB2     		sxtb	r3, r3
+ 323 0184 101C     		mov	r0, r2
+ 324 0186 191C     		mov	r1, r3
+ 325 0188 FFF7FEFF 		bl	push
+ 148:main.c        ****                     
+ 149:main.c        ****                     if ((sum(&slope_detect) == 0) && (peek(&slope_detect) != 0)) {
+ 326              		.loc 1 149 0
+ 327 018c 3B1D     		add	r3, r7, #4
+ 328 018e 181C     		mov	r0, r3
+ 329 0190 FFF7FEFF 		bl	sum
+ 330 0194 031E     		sub	r3, r0, #0
+ 331 0196 0DD1     		bne	.L16
+ 332              		.loc 1 149 0 is_stmt 0 discriminator 1
+ 333 0198 3B1D     		add	r3, r7, #4
+ 334 019a 181C     		mov	r0, r3
+ 335 019c FFF7FEFF 		bl	peek
+ 336 01a0 031E     		sub	r3, r0, #0
+ 337 01a2 07D0     		beq	.L16
+ 150:main.c        ****                         low_count = 0;
+ 338              		.loc 1 150 0 is_stmt 1
+ 339 01a4 0023     		mov	r3, #0
+ 340 01a6 BB65     		str	r3, [r7, #88]
+ 151:main.c        ****                         med_count = 0;
+ 341              		.loc 1 151 0
+ 342 01a8 0023     		mov	r3, #0
+ 343 01aa 7B65     		str	r3, [r7, #84]
+ 152:main.c        ****                         high_count = 0;
+ 344              		.loc 1 152 0
+ 345 01ac 0023     		mov	r3, #0
+ 346 01ae 3B65     		str	r3, [r7, #80]
+ 153:main.c        ****                         prev_low_count = 0;
+ 347              		.loc 1 153 0
+ 348 01b0 0023     		mov	r3, #0
+ 349 01b2 3B64     		str	r3, [r7, #64]
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 10
+
+
+ 350              	.L16:
+ 154:main.c        ****                     }
+ 155:main.c        ****                     
+ 156:main.c        ****                     UART_1_UartPutString("S1 ");
+ 351              		.loc 1 156 0
+ 352 01b4 774B     		ldr	r3, .L31+24
+ 353 01b6 181C     		mov	r0, r3
+ 354 01b8 FFF7FEFF 		bl	UART_1_UartPutString
+ 157:main.c        ****                     UART_1_UartPutString(" ");
+ 355              		.loc 1 157 0
+ 356 01bc 764B     		ldr	r3, .L31+28
+ 357 01be 181C     		mov	r0, r3
+ 358 01c0 FFF7FEFF 		bl	UART_1_UartPutString
+ 158:main.c        ****                     print_int(low_count);
+ 359              		.loc 1 158 0
+ 360 01c4 BB6D     		ldr	r3, [r7, #88]
+ 361 01c6 181C     		mov	r0, r3
+ 362 01c8 FFF7FEFF 		bl	print_int
+ 159:main.c        ****                     UART_1_UartPutString(" ");
+ 363              		.loc 1 159 0
+ 364 01cc 724B     		ldr	r3, .L31+28
+ 365 01ce 181C     		mov	r0, r3
+ 366 01d0 FFF7FEFF 		bl	UART_1_UartPutString
+ 160:main.c        ****                     print_int(med_count);
+ 367              		.loc 1 160 0
+ 368 01d4 7B6D     		ldr	r3, [r7, #84]
+ 369 01d6 181C     		mov	r0, r3
+ 370 01d8 FFF7FEFF 		bl	print_int
+ 161:main.c        ****                     UART_1_UartPutString(" ");
+ 371              		.loc 1 161 0
+ 372 01dc 6E4B     		ldr	r3, .L31+28
+ 373 01de 181C     		mov	r0, r3
+ 374 01e0 FFF7FEFF 		bl	UART_1_UartPutString
+ 162:main.c        ****                     print_int(high_count);
+ 375              		.loc 1 162 0
+ 376 01e4 3B6D     		ldr	r3, [r7, #80]
+ 377 01e6 181C     		mov	r0, r3
+ 378 01e8 FFF7FEFF 		bl	print_int
+ 163:main.c        ****                     UART_1_UartPutString(" ");
+ 379              		.loc 1 163 0
+ 380 01ec 6A4B     		ldr	r3, .L31+28
+ 381 01ee 181C     		mov	r0, r3
+ 382 01f0 FFF7FEFF 		bl	UART_1_UartPutString
+ 164:main.c        ****                     print_int(fire_count);
+ 383              		.loc 1 164 0
+ 384 01f4 FB6C     		ldr	r3, [r7, #76]
+ 385 01f6 181C     		mov	r0, r3
+ 386 01f8 FFF7FEFF 		bl	print_int
+ 165:main.c        ****                     //UART_1_UartPutString("SD: ");
+ 166:main.c        ****                     //print_int(sum(&slope_detect));
+ 167:main.c        ****                     //UART_1_UartPutString(" ");
+ 168:main.c        ****                     //print_int(peek(&slope_detect));
+ 169:main.c        ****                     UART_1_UartPutString("\r\n");             
+ 387              		.loc 1 169 0
+ 388 01fc 614B     		ldr	r3, .L31+8
+ 389 01fe 181C     		mov	r0, r3
+ 390 0200 FFF7FEFF 		bl	UART_1_UartPutString
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 11
+
+
+ 170:main.c        ****                     
+ 171:main.c        ****                     /* Check for fire alarm threshold. */
+ 172:main.c        ****                     if (fire_count > 100) {
+ 391              		.loc 1 172 0
+ 392 0204 FB6C     		ldr	r3, [r7, #76]
+ 393 0206 642B     		cmp	r3, #100
+ 394 0208 0DDD     		ble	.L17
+ 173:main.c        ****                         state = 5;
+ 395              		.loc 1 173 0
+ 396 020a 5F23     		mov	r3, #95
+ 397 020c FB18     		add	r3, r7, r3
+ 398 020e 0522     		mov	r2, #5
+ 399 0210 1A70     		strb	r2, [r3]
+ 174:main.c        ****                         liveness_count = 0;
+ 400              		.loc 1 174 0
+ 401 0212 0023     		mov	r3, #0
+ 402 0214 BB64     		str	r3, [r7, #72]
+ 175:main.c        ****                         init_queue(&slope_detect);
+ 403              		.loc 1 175 0
+ 404 0216 3B1D     		add	r3, r7, #4
+ 405 0218 181C     		mov	r0, r3
+ 406 021a FFF7FEFF 		bl	init_queue
+ 176:main.c        ****                         LED_RED_Write(LIGHT_ON);
+ 407              		.loc 1 176 0
+ 408 021e 0020     		mov	r0, #0
+ 409 0220 FFF7FEFF 		bl	LED_RED_Write
+ 410 0224 1EE0     		b	.L18
+ 411              	.L17:
+ 177:main.c        ****                     }
+ 178:main.c        ****                     
+ 179:main.c        ****                     /* Check for siren threshold. */
+ 180:main.c        ****                     else if ((low_count > 50) && (med_count > 5) && (high_count < 5)) {
+ 412              		.loc 1 180 0
+ 413 0226 BB6D     		ldr	r3, [r7, #88]
+ 414 0228 322B     		cmp	r3, #50
+ 415 022a 1BDD     		ble	.L18
+ 416              		.loc 1 180 0 is_stmt 0 discriminator 1
+ 417 022c 7B6D     		ldr	r3, [r7, #84]
+ 418 022e 052B     		cmp	r3, #5
+ 419 0230 18DD     		ble	.L18
+ 420              		.loc 1 180 0 discriminator 2
+ 421 0232 3B6D     		ldr	r3, [r7, #80]
+ 422 0234 042B     		cmp	r3, #4
+ 423 0236 15DC     		bgt	.L18
+ 181:main.c        ****                         state = 2;
+ 424              		.loc 1 181 0 is_stmt 1
+ 425 0238 5F23     		mov	r3, #95
+ 426 023a FB18     		add	r3, r7, r3
+ 427 023c 0222     		mov	r2, #2
+ 428 023e 1A70     		strb	r2, [r3]
+ 182:main.c        ****                         low_count = 0;
+ 429              		.loc 1 182 0
+ 430 0240 0023     		mov	r3, #0
+ 431 0242 BB65     		str	r3, [r7, #88]
+ 183:main.c        ****                         med_count = 0;
+ 432              		.loc 1 183 0
+ 433 0244 0023     		mov	r3, #0
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 12
+
+
+ 434 0246 7B65     		str	r3, [r7, #84]
+ 184:main.c        ****                         high_count = 0;
+ 435              		.loc 1 184 0
+ 436 0248 0023     		mov	r3, #0
+ 437 024a 3B65     		str	r3, [r7, #80]
+ 185:main.c        ****                         fire_count = 0;
+ 438              		.loc 1 185 0
+ 439 024c 0023     		mov	r3, #0
+ 440 024e FB64     		str	r3, [r7, #76]
+ 186:main.c        ****                         liveness_count = 0;
+ 441              		.loc 1 186 0
+ 442 0250 0023     		mov	r3, #0
+ 443 0252 BB64     		str	r3, [r7, #72]
+ 187:main.c        ****                         init_queue(&slope_detect);
+ 444              		.loc 1 187 0
+ 445 0254 3B1D     		add	r3, r7, #4
+ 446 0256 181C     		mov	r0, r3
+ 447 0258 FFF7FEFF 		bl	init_queue
+ 188:main.c        ****                         LED_BLUE_Write(LIGHT_ON);
+ 448              		.loc 1 188 0
+ 449 025c 0020     		mov	r0, #0
+ 450 025e FFF7FEFF 		bl	LED_BLUE_Write
+ 189:main.c        ****                     }
+ 190:main.c        ****                     
+ 191:main.c        ****                     break;
+ 451              		.loc 1 191 0
+ 452 0262 5FE1     		b	.L6
+ 453              	.L18:
+ 454 0264 5EE1     		b	.L6
+ 455              	.L11:
+ 192:main.c        ****                 
+ 193:main.c        ****                 /* In this state, check to see if the medium frequency range has been
+ 194:main.c        ****                  * captured. If the signal remains too low for too long, return back to the 
+ 195:main.c        ****                  * initial stage.
+ 196:main.c        ****                  */
+ 197:main.c        ****                 case 2:
+ 198:main.c        ****                     liveness_count++;
+ 456              		.loc 1 198 0
+ 457 0266 BB6C     		ldr	r3, [r7, #72]
+ 458 0268 0133     		add	r3, r3, #1
+ 459 026a BB64     		str	r3, [r7, #72]
+ 199:main.c        ****                     low_count = filter_count(LOW_FILTER_INPUT_Read(), &low_prev, low_count);
+ 460              		.loc 1 199 0
+ 461 026c FFF7FEFF 		bl	LOW_FILTER_INPUT_Read
+ 462 0270 031C     		mov	r3, r0
+ 463 0272 DBB2     		uxtb	r3, r3
+ 464 0274 59B2     		sxtb	r1, r3
+ 465 0276 3423     		mov	r3, #52
+ 466 0278 FA18     		add	r2, r7, r3
+ 467 027a BB6D     		ldr	r3, [r7, #88]
+ 468 027c 081C     		mov	r0, r1
+ 469 027e 111C     		mov	r1, r2
+ 470 0280 1A1C     		mov	r2, r3
+ 471 0282 FFF7FEFF 		bl	filter_count
+ 472 0286 031C     		mov	r3, r0
+ 473 0288 BB65     		str	r3, [r7, #88]
+ 200:main.c        ****                     med_count = filter_count(MED_FILTER_INPUT_Read(), &med_prev, med_count);
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 13
+
+
+ 474              		.loc 1 200 0
+ 475 028a FFF7FEFF 		bl	MED_FILTER_INPUT_Read
+ 476 028e 031C     		mov	r3, r0
+ 477 0290 DBB2     		uxtb	r3, r3
+ 478 0292 59B2     		sxtb	r1, r3
+ 479 0294 2823     		mov	r3, #40
+ 480 0296 FA18     		add	r2, r7, r3
+ 481 0298 7B6D     		ldr	r3, [r7, #84]
+ 482 029a 081C     		mov	r0, r1
+ 483 029c 111C     		mov	r1, r2
+ 484 029e 1A1C     		mov	r2, r3
+ 485 02a0 FFF7FEFF 		bl	filter_count
+ 486 02a4 031C     		mov	r3, r0
+ 487 02a6 7B65     		str	r3, [r7, #84]
+ 201:main.c        ****                     high_count = filter_count(HIGH_FILTER_INPUT_Read(), &high_prev, high_count); 
+ 488              		.loc 1 201 0
+ 489 02a8 FFF7FEFF 		bl	HIGH_FILTER_INPUT_Read
+ 490 02ac 031C     		mov	r3, r0
+ 491 02ae DBB2     		uxtb	r3, r3
+ 492 02b0 59B2     		sxtb	r1, r3
+ 493 02b2 1C23     		mov	r3, #28
+ 494 02b4 FA18     		add	r2, r7, r3
+ 495 02b6 3B6D     		ldr	r3, [r7, #80]
+ 496 02b8 081C     		mov	r0, r1
+ 497 02ba 111C     		mov	r1, r2
+ 498 02bc 1A1C     		mov	r2, r3
+ 499 02be FFF7FEFF 		bl	filter_count
+ 500 02c2 031C     		mov	r3, r0
+ 501 02c4 3B65     		str	r3, [r7, #80]
+ 202:main.c        ****                     UART_1_UartPutString("S2 ");
+ 502              		.loc 1 202 0
+ 503 02c6 354B     		ldr	r3, .L31+32
+ 504 02c8 181C     		mov	r0, r3
+ 505 02ca FFF7FEFF 		bl	UART_1_UartPutString
+ 203:main.c        ****                     print_int(low_count);
+ 506              		.loc 1 203 0
+ 507 02ce BB6D     		ldr	r3, [r7, #88]
+ 508 02d0 181C     		mov	r0, r3
+ 509 02d2 FFF7FEFF 		bl	print_int
+ 204:main.c        ****                     UART_1_UartPutString(" ");
+ 510              		.loc 1 204 0
+ 511 02d6 304B     		ldr	r3, .L31+28
+ 512 02d8 181C     		mov	r0, r3
+ 513 02da FFF7FEFF 		bl	UART_1_UartPutString
+ 205:main.c        ****                     print_int(med_count);
+ 514              		.loc 1 205 0
+ 515 02de 7B6D     		ldr	r3, [r7, #84]
+ 516 02e0 181C     		mov	r0, r3
+ 517 02e2 FFF7FEFF 		bl	print_int
+ 206:main.c        ****                     UART_1_UartPutString(" ");
+ 518              		.loc 1 206 0
+ 519 02e6 2C4B     		ldr	r3, .L31+28
+ 520 02e8 181C     		mov	r0, r3
+ 521 02ea FFF7FEFF 		bl	UART_1_UartPutString
+ 207:main.c        ****                     print_int(high_count);
+ 522              		.loc 1 207 0
+ 523 02ee 3B6D     		ldr	r3, [r7, #80]
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 14
+
+
+ 524 02f0 181C     		mov	r0, r3
+ 525 02f2 FFF7FEFF 		bl	print_int
+ 208:main.c        ****                     UART_1_UartPutString(" ");
+ 526              		.loc 1 208 0
+ 527 02f6 284B     		ldr	r3, .L31+28
+ 528 02f8 181C     		mov	r0, r3
+ 529 02fa FFF7FEFF 		bl	UART_1_UartPutString
+ 209:main.c        ****                     print_int(fire_count);
+ 530              		.loc 1 209 0
+ 531 02fe FB6C     		ldr	r3, [r7, #76]
+ 532 0300 181C     		mov	r0, r3
+ 533 0302 FFF7FEFF 		bl	print_int
+ 210:main.c        ****                     UART_1_UartPutString(" ");
+ 534              		.loc 1 210 0
+ 535 0306 244B     		ldr	r3, .L31+28
+ 536 0308 181C     		mov	r0, r3
+ 537 030a FFF7FEFF 		bl	UART_1_UartPutString
+ 211:main.c        ****                     print_int(liveness_count);
+ 538              		.loc 1 211 0
+ 539 030e BB6C     		ldr	r3, [r7, #72]
+ 540 0310 181C     		mov	r0, r3
+ 541 0312 FFF7FEFF 		bl	print_int
+ 212:main.c        ****                     UART_1_UartPutString("\r\n");
+ 542              		.loc 1 212 0
+ 543 0316 1B4B     		ldr	r3, .L31+8
+ 544 0318 181C     		mov	r0, r3
+ 545 031a FFF7FEFF 		bl	UART_1_UartPutString
+ 213:main.c        ****                     
+ 214:main.c        ****                     if (liveness_count > 120) {
+ 546              		.loc 1 214 0
+ 547 031e BB6C     		ldr	r3, [r7, #72]
+ 548 0320 782B     		cmp	r3, #120
+ 549 0322 11DD     		ble	.L19
+ 215:main.c        ****                         state = 0;
+ 550              		.loc 1 215 0
+ 551 0324 5F23     		mov	r3, #95
+ 552 0326 FB18     		add	r3, r7, r3
+ 553 0328 0022     		mov	r2, #0
+ 554 032a 1A70     		strb	r2, [r3]
+ 216:main.c        ****                         low_count = 0;
+ 555              		.loc 1 216 0
+ 556 032c 0023     		mov	r3, #0
+ 557 032e BB65     		str	r3, [r7, #88]
+ 217:main.c        ****                         med_count = 0;
+ 558              		.loc 1 217 0
+ 559 0330 0023     		mov	r3, #0
+ 560 0332 7B65     		str	r3, [r7, #84]
+ 218:main.c        ****                         high_count = 0;
+ 561              		.loc 1 218 0
+ 562 0334 0023     		mov	r3, #0
+ 563 0336 3B65     		str	r3, [r7, #80]
+ 219:main.c        ****                         fire_count = 0;
+ 564              		.loc 1 219 0
+ 565 0338 0023     		mov	r3, #0
+ 566 033a FB64     		str	r3, [r7, #76]
+ 220:main.c        ****                         liveness_count = 0;                        
+ 567              		.loc 1 220 0
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 15
+
+
+ 568 033c 0023     		mov	r3, #0
+ 569 033e BB64     		str	r3, [r7, #72]
+ 221:main.c        ****                         LED_BLUE_Write(LIGHT_OFF);
+ 570              		.loc 1 221 0
+ 571 0340 0120     		mov	r0, #1
+ 572 0342 FFF7FEFF 		bl	LED_BLUE_Write
+ 573 0346 17E0     		b	.L20
+ 574              	.L19:
+ 222:main.c        ****                     }
+ 223:main.c        ****                     else if ((low_count < 50) && (med_count > 50) && (high_count > 5)) {
+ 575              		.loc 1 223 0
+ 576 0348 BB6D     		ldr	r3, [r7, #88]
+ 577 034a 312B     		cmp	r3, #49
+ 578 034c 14DC     		bgt	.L20
+ 579              		.loc 1 223 0 is_stmt 0 discriminator 1
+ 580 034e 7B6D     		ldr	r3, [r7, #84]
+ 581 0350 322B     		cmp	r3, #50
+ 582 0352 11DD     		ble	.L20
+ 583              		.loc 1 223 0 discriminator 2
+ 584 0354 3B6D     		ldr	r3, [r7, #80]
+ 585 0356 052B     		cmp	r3, #5
+ 586 0358 0EDD     		ble	.L20
+ 224:main.c        ****                         state = 3;
+ 587              		.loc 1 224 0 is_stmt 1
+ 588 035a 5F23     		mov	r3, #95
+ 589 035c FB18     		add	r3, r7, r3
+ 590 035e 0322     		mov	r2, #3
+ 591 0360 1A70     		strb	r2, [r3]
+ 225:main.c        ****                         low_count = 0;
+ 592              		.loc 1 225 0
+ 593 0362 0023     		mov	r3, #0
+ 594 0364 BB65     		str	r3, [r7, #88]
+ 226:main.c        ****                         med_count = 0;
+ 595              		.loc 1 226 0
+ 596 0366 0023     		mov	r3, #0
+ 597 0368 7B65     		str	r3, [r7, #84]
+ 227:main.c        ****                         high_count = 0;
+ 598              		.loc 1 227 0
+ 599 036a 0023     		mov	r3, #0
+ 600 036c 3B65     		str	r3, [r7, #80]
+ 228:main.c        ****                         fire_count = 0;
+ 601              		.loc 1 228 0
+ 602 036e 0023     		mov	r3, #0
+ 603 0370 FB64     		str	r3, [r7, #76]
+ 229:main.c        ****                         liveness_count = 0;
+ 604              		.loc 1 229 0
+ 605 0372 0023     		mov	r3, #0
+ 606 0374 BB64     		str	r3, [r7, #72]
+ 230:main.c        ****                     }                                            
+ 231:main.c        ****                     break;
+ 607              		.loc 1 231 0
+ 608 0376 D5E0     		b	.L6
+ 609              	.L20:
+ 610              		.loc 1 231 0 is_stmt 0 discriminator 2
+ 611 0378 D4E0     		b	.L6
+ 612              	.L32:
+ 613 037a C046     		.align	2
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 16
+
+
+ 614              	.L31:
+ 615 037c 00000000 		.word	InterruptHandler
+ 616 0380 00000000 		.word	.LC2
+ 617 0384 10000000 		.word	.LC4
+ 618 0388 6D070000 		.word	1901
+ 619 038c 00000000 		.word	sample_lines
+ 620 0390 50000000 		.word	.L9
+ 621 0394 14000000 		.word	.LC8
+ 622 0398 18000000 		.word	.LC10
+ 623 039c 1C000000 		.word	.LC12
+ 624              	.L12:
+ 232:main.c        ****                     
+ 233:main.c        ****                 case 3:
+ 234:main.c        ****                     liveness_count++;
+ 625              		.loc 1 234 0 is_stmt 1
+ 626 03a0 BB6C     		ldr	r3, [r7, #72]
+ 627 03a2 0133     		add	r3, r3, #1
+ 628 03a4 BB64     		str	r3, [r7, #72]
+ 235:main.c        ****                     low_count = filter_count(LOW_FILTER_INPUT_Read(), &low_prev, low_count);
+ 629              		.loc 1 235 0
+ 630 03a6 FFF7FEFF 		bl	LOW_FILTER_INPUT_Read
+ 631 03aa 031C     		mov	r3, r0
+ 632 03ac DBB2     		uxtb	r3, r3
+ 633 03ae 59B2     		sxtb	r1, r3
+ 634 03b0 3423     		mov	r3, #52
+ 635 03b2 FA18     		add	r2, r7, r3
+ 636 03b4 BB6D     		ldr	r3, [r7, #88]
+ 637 03b6 081C     		mov	r0, r1
+ 638 03b8 111C     		mov	r1, r2
+ 639 03ba 1A1C     		mov	r2, r3
+ 640 03bc FFF7FEFF 		bl	filter_count
+ 641 03c0 031C     		mov	r3, r0
+ 642 03c2 BB65     		str	r3, [r7, #88]
+ 236:main.c        ****                     med_count = filter_count(MED_FILTER_INPUT_Read(), &med_prev, med_count);
+ 643              		.loc 1 236 0
+ 644 03c4 FFF7FEFF 		bl	MED_FILTER_INPUT_Read
+ 645 03c8 031C     		mov	r3, r0
+ 646 03ca DBB2     		uxtb	r3, r3
+ 647 03cc 59B2     		sxtb	r1, r3
+ 648 03ce 2823     		mov	r3, #40
+ 649 03d0 FA18     		add	r2, r7, r3
+ 650 03d2 7B6D     		ldr	r3, [r7, #84]
+ 651 03d4 081C     		mov	r0, r1
+ 652 03d6 111C     		mov	r1, r2
+ 653 03d8 1A1C     		mov	r2, r3
+ 654 03da FFF7FEFF 		bl	filter_count
+ 655 03de 031C     		mov	r3, r0
+ 656 03e0 7B65     		str	r3, [r7, #84]
+ 237:main.c        ****                     high_count = filter_count(HIGH_FILTER_INPUT_Read(), &high_prev, high_count);
+ 657              		.loc 1 237 0
+ 658 03e2 FFF7FEFF 		bl	HIGH_FILTER_INPUT_Read
+ 659 03e6 031C     		mov	r3, r0
+ 660 03e8 DBB2     		uxtb	r3, r3
+ 661 03ea 59B2     		sxtb	r1, r3
+ 662 03ec 1C23     		mov	r3, #28
+ 663 03ee FA18     		add	r2, r7, r3
+ 664 03f0 3B6D     		ldr	r3, [r7, #80]
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 17
+
+
+ 665 03f2 081C     		mov	r0, r1
+ 666 03f4 111C     		mov	r1, r2
+ 667 03f6 1A1C     		mov	r2, r3
+ 668 03f8 FFF7FEFF 		bl	filter_count
+ 669 03fc 031C     		mov	r3, r0
+ 670 03fe 3B65     		str	r3, [r7, #80]
+ 238:main.c        ****                     
+ 239:main.c        ****                     UART_1_UartPutString("S3 ");
+ 671              		.loc 1 239 0
+ 672 0400 494B     		ldr	r3, .L33
+ 673 0402 181C     		mov	r0, r3
+ 674 0404 FFF7FEFF 		bl	UART_1_UartPutString
+ 240:main.c        ****                     print_int(low_count);
+ 675              		.loc 1 240 0
+ 676 0408 BB6D     		ldr	r3, [r7, #88]
+ 677 040a 181C     		mov	r0, r3
+ 678 040c FFF7FEFF 		bl	print_int
+ 241:main.c        ****                     UART_1_UartPutString(" ");
+ 679              		.loc 1 241 0
+ 680 0410 464B     		ldr	r3, .L33+4
+ 681 0412 181C     		mov	r0, r3
+ 682 0414 FFF7FEFF 		bl	UART_1_UartPutString
+ 242:main.c        ****                     print_int(med_count);
+ 683              		.loc 1 242 0
+ 684 0418 7B6D     		ldr	r3, [r7, #84]
+ 685 041a 181C     		mov	r0, r3
+ 686 041c FFF7FEFF 		bl	print_int
+ 243:main.c        ****                     UART_1_UartPutString(" ");
+ 687              		.loc 1 243 0
+ 688 0420 424B     		ldr	r3, .L33+4
+ 689 0422 181C     		mov	r0, r3
+ 690 0424 FFF7FEFF 		bl	UART_1_UartPutString
+ 244:main.c        ****                     print_int(high_count);
+ 691              		.loc 1 244 0
+ 692 0428 3B6D     		ldr	r3, [r7, #80]
+ 693 042a 181C     		mov	r0, r3
+ 694 042c FFF7FEFF 		bl	print_int
+ 245:main.c        ****                     UART_1_UartPutString(" ");
+ 695              		.loc 1 245 0
+ 696 0430 3E4B     		ldr	r3, .L33+4
+ 697 0432 181C     		mov	r0, r3
+ 698 0434 FFF7FEFF 		bl	UART_1_UartPutString
+ 246:main.c        ****                     print_int(fire_count);
+ 699              		.loc 1 246 0
+ 700 0438 FB6C     		ldr	r3, [r7, #76]
+ 701 043a 181C     		mov	r0, r3
+ 702 043c FFF7FEFF 		bl	print_int
+ 247:main.c        ****                     UART_1_UartPutString(" ");
+ 703              		.loc 1 247 0
+ 704 0440 3A4B     		ldr	r3, .L33+4
+ 705 0442 181C     		mov	r0, r3
+ 706 0444 FFF7FEFF 		bl	UART_1_UartPutString
+ 248:main.c        ****                     print_int(liveness_count);
+ 707              		.loc 1 248 0
+ 708 0448 BB6C     		ldr	r3, [r7, #72]
+ 709 044a 181C     		mov	r0, r3
+ 710 044c FFF7FEFF 		bl	print_int
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 18
+
+
+ 249:main.c        ****                     UART_1_UartPutString("\r\n");
+ 711              		.loc 1 249 0
+ 712 0450 374B     		ldr	r3, .L33+8
+ 713 0452 181C     		mov	r0, r3
+ 714 0454 FFF7FEFF 		bl	UART_1_UartPutString
+ 250:main.c        ****                     
+ 251:main.c        ****                     if (liveness_count > 140) {
+ 715              		.loc 1 251 0
+ 716 0458 BB6C     		ldr	r3, [r7, #72]
+ 717 045a 8C2B     		cmp	r3, #140
+ 718 045c 11DD     		ble	.L21
+ 252:main.c        ****                         state = 0;
+ 719              		.loc 1 252 0
+ 720 045e 5F23     		mov	r3, #95
+ 721 0460 FB18     		add	r3, r7, r3
+ 722 0462 0022     		mov	r2, #0
+ 723 0464 1A70     		strb	r2, [r3]
+ 253:main.c        ****                         low_count = 0;
+ 724              		.loc 1 253 0
+ 725 0466 0023     		mov	r3, #0
+ 726 0468 BB65     		str	r3, [r7, #88]
+ 254:main.c        ****                         med_count = 0;
+ 727              		.loc 1 254 0
+ 728 046a 0023     		mov	r3, #0
+ 729 046c 7B65     		str	r3, [r7, #84]
+ 255:main.c        ****                         high_count = 0;
+ 730              		.loc 1 255 0
+ 731 046e 0023     		mov	r3, #0
+ 732 0470 3B65     		str	r3, [r7, #80]
+ 256:main.c        ****                         fire_count = 0;
+ 733              		.loc 1 256 0
+ 734 0472 0023     		mov	r3, #0
+ 735 0474 FB64     		str	r3, [r7, #76]
+ 257:main.c        ****                         liveness_count = 0;
+ 736              		.loc 1 257 0
+ 737 0476 0023     		mov	r3, #0
+ 738 0478 BB64     		str	r3, [r7, #72]
+ 258:main.c        ****                         LED_BLUE_Write(LIGHT_OFF);
+ 739              		.loc 1 258 0
+ 740 047a 0120     		mov	r0, #1
+ 741 047c FFF7FEFF 		bl	LED_BLUE_Write
+ 742 0480 21E0     		b	.L22
+ 743              	.L21:
+ 259:main.c        ****                     }
+ 260:main.c        ****                     else if ((low_count < 10) && (med_count < 30) && (high_count > 50)) {
+ 744              		.loc 1 260 0
+ 745 0482 BB6D     		ldr	r3, [r7, #88]
+ 746 0484 092B     		cmp	r3, #9
+ 747 0486 1EDC     		bgt	.L22
+ 748              		.loc 1 260 0 is_stmt 0 discriminator 1
+ 749 0488 7B6D     		ldr	r3, [r7, #84]
+ 750 048a 1D2B     		cmp	r3, #29
+ 751 048c 1BDC     		bgt	.L22
+ 752              		.loc 1 260 0 discriminator 2
+ 753 048e 3B6D     		ldr	r3, [r7, #80]
+ 754 0490 322B     		cmp	r3, #50
+ 755 0492 18DD     		ble	.L22
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 19
+
+
+ 261:main.c        ****                         state = 4;
+ 756              		.loc 1 261 0 is_stmt 1
+ 757 0494 5F23     		mov	r3, #95
+ 758 0496 FB18     		add	r3, r7, r3
+ 759 0498 0422     		mov	r2, #4
+ 760 049a 1A70     		strb	r2, [r3]
+ 262:main.c        ****                         low_count = 0;
+ 761              		.loc 1 262 0
+ 762 049c 0023     		mov	r3, #0
+ 763 049e BB65     		str	r3, [r7, #88]
+ 263:main.c        ****                         med_count = 0;
+ 764              		.loc 1 263 0
+ 765 04a0 0023     		mov	r3, #0
+ 766 04a2 7B65     		str	r3, [r7, #84]
+ 264:main.c        ****                         high_count = 0;
+ 767              		.loc 1 264 0
+ 768 04a4 0023     		mov	r3, #0
+ 769 04a6 3B65     		str	r3, [r7, #80]
+ 265:main.c        ****                         fire_count = 0;
+ 770              		.loc 1 265 0
+ 771 04a8 0023     		mov	r3, #0
+ 772 04aa FB64     		str	r3, [r7, #76]
+ 266:main.c        ****                         liveness_count = 0;
+ 773              		.loc 1 266 0
+ 774 04ac 0023     		mov	r3, #0
+ 775 04ae BB64     		str	r3, [r7, #72]
+ 267:main.c        ****                         LED_BLUE_Write(LIGHT_OFF);
+ 776              		.loc 1 267 0
+ 777 04b0 0120     		mov	r0, #1
+ 778 04b2 FFF7FEFF 		bl	LED_BLUE_Write
+ 268:main.c        ****                         LED_GREEN_Write(LIGHT_ON);
+ 779              		.loc 1 268 0
+ 780 04b6 0020     		mov	r0, #0
+ 781 04b8 FFF7FEFF 		bl	LED_GREEN_Write
+ 269:main.c        ****                         UART_1_UartPutString("Siren Detected\r\n");
+ 782              		.loc 1 269 0
+ 783 04bc 1D4B     		ldr	r3, .L33+12
+ 784 04be 181C     		mov	r0, r3
+ 785 04c0 FFF7FEFF 		bl	UART_1_UartPutString
+ 270:main.c        ****                     }
+ 271:main.c        ****                     break;
+ 786              		.loc 1 271 0
+ 787 04c4 2EE0     		b	.L6
+ 788              	.L22:
+ 789              		.loc 1 271 0 is_stmt 0 discriminator 3
+ 790 04c6 2DE0     		b	.L6
+ 791              	.L30:
+ 272:main.c        ****                 /* Wait for user input to reset state machine. */
+ 273:main.c        ****                 case 4:
+ 274:main.c        ****                     while(USER_INPUT_Read());
+ 792              		.loc 1 274 0 is_stmt 1
+ 793 04c8 C046     		mov	r8, r8
+ 794              	.L23:
+ 795              		.loc 1 274 0 is_stmt 0 discriminator 1
+ 796 04ca FFF7FEFF 		bl	USER_INPUT_Read
+ 797 04ce 031E     		sub	r3, r0, #0
+ 798 04d0 FBD1     		bne	.L23
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 20
+
+
+ 275:main.c        ****                     while(!USER_INPUT_Read());
+ 799              		.loc 1 275 0 is_stmt 1
+ 800 04d2 C046     		mov	r8, r8
+ 801              	.L24:
+ 802              		.loc 1 275 0 is_stmt 0 discriminator 1
+ 803 04d4 FFF7FEFF 		bl	USER_INPUT_Read
+ 804 04d8 031E     		sub	r3, r0, #0
+ 805 04da FBD0     		beq	.L24
+ 276:main.c        ****                     state = 0;
+ 806              		.loc 1 276 0 is_stmt 1
+ 807 04dc 5F23     		mov	r3, #95
+ 808 04de FB18     		add	r3, r7, r3
+ 809 04e0 0022     		mov	r2, #0
+ 810 04e2 1A70     		strb	r2, [r3]
+ 277:main.c        ****                     LED_GREEN_Write(LIGHT_OFF);
+ 811              		.loc 1 277 0
+ 812 04e4 0120     		mov	r0, #1
+ 813 04e6 FFF7FEFF 		bl	LED_GREEN_Write
+ 278:main.c        ****                     break;
+ 814              		.loc 1 278 0
+ 815 04ea 1BE0     		b	.L6
+ 816              	.L14:
+ 279:main.c        ****                     
+ 280:main.c        ****                 /* In this state, begin detection of the fire alarm.
+ 281:main.c        ****                  */
+ 282:main.c        ****                 case 5:
+ 283:main.c        ****                     UART_1_UartPutString("Fire Alarm Detected\r\n");
+ 817              		.loc 1 283 0
+ 818 04ec 124B     		ldr	r3, .L33+16
+ 819 04ee 181C     		mov	r0, r3
+ 820 04f0 FFF7FEFF 		bl	UART_1_UartPutString
+ 284:main.c        ****                     LED_RED_Write(LIGHT_ON);
+ 821              		.loc 1 284 0
+ 822 04f4 0020     		mov	r0, #0
+ 823 04f6 FFF7FEFF 		bl	LED_RED_Write
+ 285:main.c        ****                     while(USER_INPUT_Read());
+ 824              		.loc 1 285 0
+ 825 04fa C046     		mov	r8, r8
+ 826              	.L25:
+ 827              		.loc 1 285 0 is_stmt 0 discriminator 1
+ 828 04fc FFF7FEFF 		bl	USER_INPUT_Read
+ 829 0500 031E     		sub	r3, r0, #0
+ 830 0502 FBD1     		bne	.L25
+ 286:main.c        ****                     while(!USER_INPUT_Read());
+ 831              		.loc 1 286 0 is_stmt 1
+ 832 0504 C046     		mov	r8, r8
+ 833              	.L26:
+ 834              		.loc 1 286 0 is_stmt 0 discriminator 1
+ 835 0506 FFF7FEFF 		bl	USER_INPUT_Read
+ 836 050a 031E     		sub	r3, r0, #0
+ 837 050c FBD0     		beq	.L26
+ 287:main.c        ****                     LED_RED_Write(LIGHT_OFF);
+ 838              		.loc 1 287 0 is_stmt 1
+ 839 050e 0120     		mov	r0, #1
+ 840 0510 FFF7FEFF 		bl	LED_RED_Write
+ 288:main.c        ****                     state = 0;                   
+ 841              		.loc 1 288 0
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 21
+
+
+ 842 0514 5F23     		mov	r3, #95
+ 843 0516 FB18     		add	r3, r7, r3
+ 844 0518 0022     		mov	r2, #0
+ 845 051a 1A70     		strb	r2, [r3]
+ 289:main.c        ****                     break;
+ 846              		.loc 1 289 0
+ 847 051c 02E0     		b	.L6
+ 848              	.L28:
+ 290:main.c        ****                     
+ 291:main.c        ****                 /* In this state, wait until user input to reset the
+ 292:main.c        ****                  * FSM.
+ 293:main.c        ****                  */
+ 294:main.c        ****                 case 6:
+ 295:main.c        ****                     break;
+ 296:main.c        ****                     
+ 297:main.c        ****                 default:
+ 298:main.c        ****                     break;
+ 849              		.loc 1 298 0
+ 850 051e C046     		mov	r8, r8
+ 851 0520 C0E5     		b	.L27
+ 852              	.L29:
+ 295:main.c        ****                     
+ 853              		.loc 1 295 0
+ 854 0522 C046     		mov	r8, r8
+ 855              	.L6:
+ 299:main.c        ****             }        
+ 300:main.c        ****         }
+ 301:main.c        ****     }
+ 856              		.loc 1 301 0 discriminator 1
+ 857 0524 BEE5     		b	.L27
+ 858              	.L34:
+ 859 0526 C046     		.align	2
+ 860              	.L33:
+ 861 0528 20000000 		.word	.LC14
+ 862 052c 18000000 		.word	.LC10
+ 863 0530 10000000 		.word	.LC4
+ 864 0534 24000000 		.word	.LC16
+ 865 0538 38000000 		.word	.LC18
+ 866              		.cfi_endproc
+ 867              	.LFE38:
+ 868              		.size	main, .-main
+ 869              		.text
+ 870              	.Letext0:
+ 871              		.file 2 "Generated_Source\\PSoC4/cytypes.h"
+ 872              		.file 3 "queue.h"
+ 873              		.section	.debug_info,"",%progbits
+ 874              	.Ldebug_info0:
+ 875 0000 E8010000 		.4byte	0x1e8
+ 876 0004 0400     		.2byte	0x4
+ 877 0006 00000000 		.4byte	.Ldebug_abbrev0
+ 878 000a 04       		.byte	0x4
+ 879 000b 01       		.uleb128 0x1
+ 880 000c 96000000 		.4byte	.LASF33
+ 881 0010 01       		.byte	0x1
+ 882 0011 B8010000 		.4byte	.LASF34
+ 883 0015 E1010000 		.4byte	.LASF35
+ 884 0019 00000000 		.4byte	.Ldebug_ranges0+0
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 22
+
+
+ 885 001d 00000000 		.4byte	0
+ 886 0021 00000000 		.4byte	.Ldebug_line0
+ 887 0025 02       		.uleb128 0x2
+ 888 0026 01       		.byte	0x1
+ 889 0027 06       		.byte	0x6
+ 890 0028 1E020000 		.4byte	.LASF0
+ 891 002c 02       		.uleb128 0x2
+ 892 002d 01       		.byte	0x1
+ 893 002e 08       		.byte	0x8
+ 894 002f 5A000000 		.4byte	.LASF1
+ 895 0033 02       		.uleb128 0x2
+ 896 0034 02       		.byte	0x2
+ 897 0035 05       		.byte	0x5
+ 898 0036 C4010000 		.4byte	.LASF2
+ 899 003a 02       		.uleb128 0x2
+ 900 003b 02       		.byte	0x2
+ 901 003c 07       		.byte	0x7
+ 902 003d 26000000 		.4byte	.LASF3
+ 903 0041 02       		.uleb128 0x2
+ 904 0042 04       		.byte	0x4
+ 905 0043 05       		.byte	0x5
+ 906 0044 D8010000 		.4byte	.LASF4
+ 907 0048 02       		.uleb128 0x2
+ 908 0049 04       		.byte	0x4
+ 909 004a 07       		.byte	0x7
+ 910 004b 72000000 		.4byte	.LASF5
+ 911 004f 02       		.uleb128 0x2
+ 912 0050 08       		.byte	0x8
+ 913 0051 05       		.byte	0x5
+ 914 0052 9B010000 		.4byte	.LASF6
+ 915 0056 02       		.uleb128 0x2
+ 916 0057 08       		.byte	0x8
+ 917 0058 07       		.byte	0x7
+ 918 0059 4A010000 		.4byte	.LASF7
+ 919 005d 03       		.uleb128 0x3
+ 920 005e 04       		.byte	0x4
+ 921 005f 05       		.byte	0x5
+ 922 0060 696E7400 		.ascii	"int\000"
+ 923 0064 02       		.uleb128 0x2
+ 924 0065 04       		.byte	0x4
+ 925 0066 07       		.byte	0x7
+ 926 0067 35010000 		.4byte	.LASF8
+ 927 006b 04       		.uleb128 0x4
+ 928 006c 84000000 		.4byte	.LASF9
+ 929 0070 02       		.byte	0x2
+ 930 0071 B901     		.2byte	0x1b9
+ 931 0073 2C000000 		.4byte	0x2c
+ 932 0077 04       		.uleb128 0x4
+ 933 0078 2E010000 		.4byte	.LASF10
+ 934 007c 02       		.byte	0x2
+ 935 007d BB01     		.2byte	0x1bb
+ 936 007f 48000000 		.4byte	0x48
+ 937 0083 04       		.uleb128 0x4
+ 938 0084 29010000 		.4byte	.LASF11
+ 939 0088 02       		.byte	0x2
+ 940 0089 BC01     		.2byte	0x1bc
+ 941 008b 25000000 		.4byte	0x25
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 23
+
+
+ 942 008f 02       		.uleb128 0x2
+ 943 0090 04       		.byte	0x4
+ 944 0091 04       		.byte	0x4
+ 945 0092 4F000000 		.4byte	.LASF12
+ 946 0096 02       		.uleb128 0x2
+ 947 0097 08       		.byte	0x8
+ 948 0098 04       		.byte	0x4
+ 949 0099 8A000000 		.4byte	.LASF13
+ 950 009d 02       		.uleb128 0x2
+ 951 009e 01       		.byte	0x1
+ 952 009f 08       		.byte	0x8
+ 953 00a0 BF010000 		.4byte	.LASF14
+ 954 00a4 02       		.uleb128 0x2
+ 955 00a5 04       		.byte	0x4
+ 956 00a6 07       		.byte	0x7
+ 957 00a7 92010000 		.4byte	.LASF15
+ 958 00ab 05       		.uleb128 0x5
+ 959 00ac 0C       		.byte	0xc
+ 960 00ad 03       		.byte	0x3
+ 961 00ae 12       		.byte	0x12
+ 962 00af CC000000 		.4byte	0xcc
+ 963 00b3 06       		.uleb128 0x6
+ 964 00b4 24010000 		.4byte	.LASF16
+ 965 00b8 03       		.byte	0x3
+ 966 00b9 13       		.byte	0x13
+ 967 00ba 5D000000 		.4byte	0x5d
+ 968 00be 00       		.byte	0
+ 969 00bf 06       		.uleb128 0x6
+ 970 00c0 55000000 		.4byte	.LASF17
+ 971 00c4 03       		.byte	0x3
+ 972 00c5 14       		.byte	0x14
+ 973 00c6 CC000000 		.4byte	0xcc
+ 974 00ca 04       		.byte	0x4
+ 975 00cb 00       		.byte	0
+ 976 00cc 07       		.uleb128 0x7
+ 977 00cd 83000000 		.4byte	0x83
+ 978 00d1 DC000000 		.4byte	0xdc
+ 979 00d5 08       		.uleb128 0x8
+ 980 00d6 A4000000 		.4byte	0xa4
+ 981 00da 05       		.byte	0x5
+ 982 00db 00       		.byte	0
+ 983 00dc 09       		.uleb128 0x9
+ 984 00dd 42010000 		.4byte	.LASF18
+ 985 00e1 03       		.byte	0x3
+ 986 00e2 15       		.byte	0x15
+ 987 00e3 AB000000 		.4byte	0xab
+ 988 00e7 0A       		.uleb128 0xa
+ 989 00e8 61010000 		.4byte	.LASF36
+ 990 00ec 01       		.byte	0x1
+ 991 00ed 2F       		.byte	0x2f
+ 992 00ee 00000000 		.4byte	.LFB37
+ 993 00f2 24000000 		.4byte	.LFE37-.LFB37
+ 994 00f6 01       		.uleb128 0x1
+ 995 00f7 9C       		.byte	0x9c
+ 996 00f8 0B       		.uleb128 0xb
+ 997 00f9 91000000 		.4byte	.LASF37
+ 998 00fd 01       		.byte	0x1
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 24
+
+
+ 999 00fe 3B       		.byte	0x3b
+ 1000 00ff 5D000000 		.4byte	0x5d
+ 1001 0103 00000000 		.4byte	.LFB38
+ 1002 0107 3C050000 		.4byte	.LFE38-.LFB38
+ 1003 010b 01       		.uleb128 0x1
+ 1004 010c 9C       		.byte	0x9c
+ 1005 010d C9010000 		.4byte	0x1c9
+ 1006 0111 0C       		.uleb128 0xc
+ 1007 0112 17000000 		.4byte	.LASF19
+ 1008 0116 01       		.byte	0x1
+ 1009 0117 4C       		.byte	0x4c
+ 1010 0118 6B000000 		.4byte	0x6b
+ 1011 011c 02       		.uleb128 0x2
+ 1012 011d 91       		.byte	0x91
+ 1013 011e 77       		.sleb128 -9
+ 1014 011f 0C       		.uleb128 0xc
+ 1015 0120 1D000000 		.4byte	.LASF20
+ 1016 0124 01       		.byte	0x1
+ 1017 0125 5C       		.byte	0x5c
+ 1018 0126 DC000000 		.4byte	0xdc
+ 1019 012a 02       		.uleb128 0x2
+ 1020 012b 91       		.byte	0x91
+ 1021 012c 4C       		.sleb128 -52
+ 1022 012d 0C       		.uleb128 0xc
+ 1023 012e 39000000 		.4byte	.LASF21
+ 1024 0132 01       		.byte	0x1
+ 1025 0133 5D       		.byte	0x5d
+ 1026 0134 DC000000 		.4byte	0xdc
+ 1027 0138 02       		.uleb128 0x2
+ 1028 0139 91       		.byte	0x91
+ 1029 013a 40       		.sleb128 -64
+ 1030 013b 0C       		.uleb128 0xc
+ 1031 013c CE010000 		.4byte	.LASF22
+ 1032 0140 01       		.byte	0x1
+ 1033 0141 5E       		.byte	0x5e
+ 1034 0142 DC000000 		.4byte	0xdc
+ 1035 0146 03       		.uleb128 0x3
+ 1036 0147 91       		.byte	0x91
+ 1037 0148 B47F     		.sleb128 -76
+ 1038 014a 0C       		.uleb128 0xc
+ 1039 014b 0D000000 		.4byte	.LASF23
+ 1040 014f 01       		.byte	0x1
+ 1041 0150 5F       		.byte	0x5f
+ 1042 0151 DC000000 		.4byte	0xdc
+ 1043 0155 03       		.uleb128 0x3
+ 1044 0156 91       		.byte	0x91
+ 1045 0157 A87F     		.sleb128 -88
+ 1046 0159 0C       		.uleb128 0xc
+ 1047 015a 42000000 		.4byte	.LASF24
+ 1048 015e 01       		.byte	0x1
+ 1049 015f 60       		.byte	0x60
+ 1050 0160 DC000000 		.4byte	0xdc
+ 1051 0164 03       		.uleb128 0x3
+ 1052 0165 91       		.byte	0x91
+ 1053 0166 9C7F     		.sleb128 -100
+ 1054 0168 0C       		.uleb128 0xc
+ 1055 0169 68000000 		.4byte	.LASF25
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 25
+
+
+ 1056 016d 01       		.byte	0x1
+ 1057 016e 62       		.byte	0x62
+ 1058 016f 5D000000 		.4byte	0x5d
+ 1059 0173 02       		.uleb128 0x2
+ 1060 0174 91       		.byte	0x91
+ 1061 0175 70       		.sleb128 -16
+ 1062 0176 0C       		.uleb128 0xc
+ 1063 0177 2A020000 		.4byte	.LASF26
+ 1064 017b 01       		.byte	0x1
+ 1065 017c 63       		.byte	0x63
+ 1066 017d 5D000000 		.4byte	0x5d
+ 1067 0181 02       		.uleb128 0x2
+ 1068 0182 91       		.byte	0x91
+ 1069 0183 6C       		.sleb128 -20
+ 1070 0184 0C       		.uleb128 0xc
+ 1071 0185 87010000 		.4byte	.LASF27
+ 1072 0189 01       		.byte	0x1
+ 1073 018a 64       		.byte	0x64
+ 1074 018b 5D000000 		.4byte	0x5d
+ 1075 018f 02       		.uleb128 0x2
+ 1076 0190 91       		.byte	0x91
+ 1077 0191 68       		.sleb128 -24
+ 1078 0192 0C       		.uleb128 0xc
+ 1079 0193 72010000 		.4byte	.LASF28
+ 1080 0197 01       		.byte	0x1
+ 1081 0198 65       		.byte	0x65
+ 1082 0199 5D000000 		.4byte	0x5d
+ 1083 019d 02       		.uleb128 0x2
+ 1084 019e 91       		.byte	0x91
+ 1085 019f 64       		.sleb128 -28
+ 1086 01a0 0C       		.uleb128 0xc
+ 1087 01a1 A9010000 		.4byte	.LASF29
+ 1088 01a5 01       		.byte	0x1
+ 1089 01a6 66       		.byte	0x66
+ 1090 01a7 5D000000 		.4byte	0x5d
+ 1091 01ab 02       		.uleb128 0x2
+ 1092 01ac 91       		.byte	0x91
+ 1093 01ad 60       		.sleb128 -32
+ 1094 01ae 0C       		.uleb128 0xc
+ 1095 01af 34020000 		.4byte	.LASF30
+ 1096 01b3 01       		.byte	0x1
+ 1097 01b4 67       		.byte	0x67
+ 1098 01b5 5D000000 		.4byte	0x5d
+ 1099 01b9 02       		.uleb128 0x2
+ 1100 01ba 91       		.byte	0x91
+ 1101 01bb 58       		.sleb128 -40
+ 1102 01bc 0D       		.uleb128 0xd
+ 1103 01bd 6900     		.ascii	"i\000"
+ 1104 01bf 01       		.byte	0x1
+ 1105 01c0 6A       		.byte	0x6a
+ 1106 01c1 5D000000 		.4byte	0x5d
+ 1107 01c5 02       		.uleb128 0x2
+ 1108 01c6 91       		.byte	0x91
+ 1109 01c7 5C       		.sleb128 -36
+ 1110 01c8 00       		.byte	0
+ 1111 01c9 0E       		.uleb128 0xe
+ 1112 01ca 7D010000 		.4byte	.LASF31
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 26
+
+
+ 1113 01ce 01       		.byte	0x1
+ 1114 01cf 22       		.byte	0x22
+ 1115 01d0 6B000000 		.4byte	0x6b
+ 1116 01d4 05       		.uleb128 0x5
+ 1117 01d5 03       		.byte	0x3
+ 1118 01d6 00000000 		.4byte	activeLed
+ 1119 01da 0E       		.uleb128 0xe
+ 1120 01db 00000000 		.4byte	.LASF32
+ 1121 01df 01       		.byte	0x1
+ 1122 01e0 24       		.byte	0x24
+ 1123 01e1 6B000000 		.4byte	0x6b
+ 1124 01e5 05       		.uleb128 0x5
+ 1125 01e6 03       		.byte	0x3
+ 1126 01e7 00000000 		.4byte	sample_lines
+ 1127 01eb 00       		.byte	0
+ 1128              		.section	.debug_abbrev,"",%progbits
+ 1129              	.Ldebug_abbrev0:
+ 1130 0000 01       		.uleb128 0x1
+ 1131 0001 11       		.uleb128 0x11
+ 1132 0002 01       		.byte	0x1
+ 1133 0003 25       		.uleb128 0x25
+ 1134 0004 0E       		.uleb128 0xe
+ 1135 0005 13       		.uleb128 0x13
+ 1136 0006 0B       		.uleb128 0xb
+ 1137 0007 03       		.uleb128 0x3
+ 1138 0008 0E       		.uleb128 0xe
+ 1139 0009 1B       		.uleb128 0x1b
+ 1140 000a 0E       		.uleb128 0xe
+ 1141 000b 55       		.uleb128 0x55
+ 1142 000c 17       		.uleb128 0x17
+ 1143 000d 11       		.uleb128 0x11
+ 1144 000e 01       		.uleb128 0x1
+ 1145 000f 10       		.uleb128 0x10
+ 1146 0010 17       		.uleb128 0x17
+ 1147 0011 00       		.byte	0
+ 1148 0012 00       		.byte	0
+ 1149 0013 02       		.uleb128 0x2
+ 1150 0014 24       		.uleb128 0x24
+ 1151 0015 00       		.byte	0
+ 1152 0016 0B       		.uleb128 0xb
+ 1153 0017 0B       		.uleb128 0xb
+ 1154 0018 3E       		.uleb128 0x3e
+ 1155 0019 0B       		.uleb128 0xb
+ 1156 001a 03       		.uleb128 0x3
+ 1157 001b 0E       		.uleb128 0xe
+ 1158 001c 00       		.byte	0
+ 1159 001d 00       		.byte	0
+ 1160 001e 03       		.uleb128 0x3
+ 1161 001f 24       		.uleb128 0x24
+ 1162 0020 00       		.byte	0
+ 1163 0021 0B       		.uleb128 0xb
+ 1164 0022 0B       		.uleb128 0xb
+ 1165 0023 3E       		.uleb128 0x3e
+ 1166 0024 0B       		.uleb128 0xb
+ 1167 0025 03       		.uleb128 0x3
+ 1168 0026 08       		.uleb128 0x8
+ 1169 0027 00       		.byte	0
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 27
+
+
+ 1170 0028 00       		.byte	0
+ 1171 0029 04       		.uleb128 0x4
+ 1172 002a 16       		.uleb128 0x16
+ 1173 002b 00       		.byte	0
+ 1174 002c 03       		.uleb128 0x3
+ 1175 002d 0E       		.uleb128 0xe
+ 1176 002e 3A       		.uleb128 0x3a
+ 1177 002f 0B       		.uleb128 0xb
+ 1178 0030 3B       		.uleb128 0x3b
+ 1179 0031 05       		.uleb128 0x5
+ 1180 0032 49       		.uleb128 0x49
+ 1181 0033 13       		.uleb128 0x13
+ 1182 0034 00       		.byte	0
+ 1183 0035 00       		.byte	0
+ 1184 0036 05       		.uleb128 0x5
+ 1185 0037 13       		.uleb128 0x13
+ 1186 0038 01       		.byte	0x1
+ 1187 0039 0B       		.uleb128 0xb
+ 1188 003a 0B       		.uleb128 0xb
+ 1189 003b 3A       		.uleb128 0x3a
+ 1190 003c 0B       		.uleb128 0xb
+ 1191 003d 3B       		.uleb128 0x3b
+ 1192 003e 0B       		.uleb128 0xb
+ 1193 003f 01       		.uleb128 0x1
+ 1194 0040 13       		.uleb128 0x13
+ 1195 0041 00       		.byte	0
+ 1196 0042 00       		.byte	0
+ 1197 0043 06       		.uleb128 0x6
+ 1198 0044 0D       		.uleb128 0xd
+ 1199 0045 00       		.byte	0
+ 1200 0046 03       		.uleb128 0x3
+ 1201 0047 0E       		.uleb128 0xe
+ 1202 0048 3A       		.uleb128 0x3a
+ 1203 0049 0B       		.uleb128 0xb
+ 1204 004a 3B       		.uleb128 0x3b
+ 1205 004b 0B       		.uleb128 0xb
+ 1206 004c 49       		.uleb128 0x49
+ 1207 004d 13       		.uleb128 0x13
+ 1208 004e 38       		.uleb128 0x38
+ 1209 004f 0B       		.uleb128 0xb
+ 1210 0050 00       		.byte	0
+ 1211 0051 00       		.byte	0
+ 1212 0052 07       		.uleb128 0x7
+ 1213 0053 01       		.uleb128 0x1
+ 1214 0054 01       		.byte	0x1
+ 1215 0055 49       		.uleb128 0x49
+ 1216 0056 13       		.uleb128 0x13
+ 1217 0057 01       		.uleb128 0x1
+ 1218 0058 13       		.uleb128 0x13
+ 1219 0059 00       		.byte	0
+ 1220 005a 00       		.byte	0
+ 1221 005b 08       		.uleb128 0x8
+ 1222 005c 21       		.uleb128 0x21
+ 1223 005d 00       		.byte	0
+ 1224 005e 49       		.uleb128 0x49
+ 1225 005f 13       		.uleb128 0x13
+ 1226 0060 2F       		.uleb128 0x2f
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 28
+
+
+ 1227 0061 0B       		.uleb128 0xb
+ 1228 0062 00       		.byte	0
+ 1229 0063 00       		.byte	0
+ 1230 0064 09       		.uleb128 0x9
+ 1231 0065 16       		.uleb128 0x16
+ 1232 0066 00       		.byte	0
+ 1233 0067 03       		.uleb128 0x3
+ 1234 0068 0E       		.uleb128 0xe
+ 1235 0069 3A       		.uleb128 0x3a
+ 1236 006a 0B       		.uleb128 0xb
+ 1237 006b 3B       		.uleb128 0x3b
+ 1238 006c 0B       		.uleb128 0xb
+ 1239 006d 49       		.uleb128 0x49
+ 1240 006e 13       		.uleb128 0x13
+ 1241 006f 00       		.byte	0
+ 1242 0070 00       		.byte	0
+ 1243 0071 0A       		.uleb128 0xa
+ 1244 0072 2E       		.uleb128 0x2e
+ 1245 0073 00       		.byte	0
+ 1246 0074 3F       		.uleb128 0x3f
+ 1247 0075 19       		.uleb128 0x19
+ 1248 0076 03       		.uleb128 0x3
+ 1249 0077 0E       		.uleb128 0xe
+ 1250 0078 3A       		.uleb128 0x3a
+ 1251 0079 0B       		.uleb128 0xb
+ 1252 007a 3B       		.uleb128 0x3b
+ 1253 007b 0B       		.uleb128 0xb
+ 1254 007c 27       		.uleb128 0x27
+ 1255 007d 19       		.uleb128 0x19
+ 1256 007e 11       		.uleb128 0x11
+ 1257 007f 01       		.uleb128 0x1
+ 1258 0080 12       		.uleb128 0x12
+ 1259 0081 06       		.uleb128 0x6
+ 1260 0082 40       		.uleb128 0x40
+ 1261 0083 18       		.uleb128 0x18
+ 1262 0084 9642     		.uleb128 0x2116
+ 1263 0086 19       		.uleb128 0x19
+ 1264 0087 00       		.byte	0
+ 1265 0088 00       		.byte	0
+ 1266 0089 0B       		.uleb128 0xb
+ 1267 008a 2E       		.uleb128 0x2e
+ 1268 008b 01       		.byte	0x1
+ 1269 008c 3F       		.uleb128 0x3f
+ 1270 008d 19       		.uleb128 0x19
+ 1271 008e 03       		.uleb128 0x3
+ 1272 008f 0E       		.uleb128 0xe
+ 1273 0090 3A       		.uleb128 0x3a
+ 1274 0091 0B       		.uleb128 0xb
+ 1275 0092 3B       		.uleb128 0x3b
+ 1276 0093 0B       		.uleb128 0xb
+ 1277 0094 49       		.uleb128 0x49
+ 1278 0095 13       		.uleb128 0x13
+ 1279 0096 11       		.uleb128 0x11
+ 1280 0097 01       		.uleb128 0x1
+ 1281 0098 12       		.uleb128 0x12
+ 1282 0099 06       		.uleb128 0x6
+ 1283 009a 40       		.uleb128 0x40
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 29
+
+
+ 1284 009b 18       		.uleb128 0x18
+ 1285 009c 9642     		.uleb128 0x2116
+ 1286 009e 19       		.uleb128 0x19
+ 1287 009f 01       		.uleb128 0x1
+ 1288 00a0 13       		.uleb128 0x13
+ 1289 00a1 00       		.byte	0
+ 1290 00a2 00       		.byte	0
+ 1291 00a3 0C       		.uleb128 0xc
+ 1292 00a4 34       		.uleb128 0x34
+ 1293 00a5 00       		.byte	0
+ 1294 00a6 03       		.uleb128 0x3
+ 1295 00a7 0E       		.uleb128 0xe
+ 1296 00a8 3A       		.uleb128 0x3a
+ 1297 00a9 0B       		.uleb128 0xb
+ 1298 00aa 3B       		.uleb128 0x3b
+ 1299 00ab 0B       		.uleb128 0xb
+ 1300 00ac 49       		.uleb128 0x49
+ 1301 00ad 13       		.uleb128 0x13
+ 1302 00ae 02       		.uleb128 0x2
+ 1303 00af 18       		.uleb128 0x18
+ 1304 00b0 00       		.byte	0
+ 1305 00b1 00       		.byte	0
+ 1306 00b2 0D       		.uleb128 0xd
+ 1307 00b3 34       		.uleb128 0x34
+ 1308 00b4 00       		.byte	0
+ 1309 00b5 03       		.uleb128 0x3
+ 1310 00b6 08       		.uleb128 0x8
+ 1311 00b7 3A       		.uleb128 0x3a
+ 1312 00b8 0B       		.uleb128 0xb
+ 1313 00b9 3B       		.uleb128 0x3b
+ 1314 00ba 0B       		.uleb128 0xb
+ 1315 00bb 49       		.uleb128 0x49
+ 1316 00bc 13       		.uleb128 0x13
+ 1317 00bd 02       		.uleb128 0x2
+ 1318 00be 18       		.uleb128 0x18
+ 1319 00bf 00       		.byte	0
+ 1320 00c0 00       		.byte	0
+ 1321 00c1 0E       		.uleb128 0xe
+ 1322 00c2 34       		.uleb128 0x34
+ 1323 00c3 00       		.byte	0
+ 1324 00c4 03       		.uleb128 0x3
+ 1325 00c5 0E       		.uleb128 0xe
+ 1326 00c6 3A       		.uleb128 0x3a
+ 1327 00c7 0B       		.uleb128 0xb
+ 1328 00c8 3B       		.uleb128 0x3b
+ 1329 00c9 0B       		.uleb128 0xb
+ 1330 00ca 49       		.uleb128 0x49
+ 1331 00cb 13       		.uleb128 0x13
+ 1332 00cc 3F       		.uleb128 0x3f
+ 1333 00cd 19       		.uleb128 0x19
+ 1334 00ce 02       		.uleb128 0x2
+ 1335 00cf 18       		.uleb128 0x18
+ 1336 00d0 00       		.byte	0
+ 1337 00d1 00       		.byte	0
+ 1338 00d2 00       		.byte	0
+ 1339              		.section	.debug_aranges,"",%progbits
+ 1340 0000 24000000 		.4byte	0x24
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 30
+
+
+ 1341 0004 0200     		.2byte	0x2
+ 1342 0006 00000000 		.4byte	.Ldebug_info0
+ 1343 000a 04       		.byte	0x4
+ 1344 000b 00       		.byte	0
+ 1345 000c 0000     		.2byte	0
+ 1346 000e 0000     		.2byte	0
+ 1347 0010 00000000 		.4byte	.LFB37
+ 1348 0014 24000000 		.4byte	.LFE37-.LFB37
+ 1349 0018 00000000 		.4byte	.LFB38
+ 1350 001c 3C050000 		.4byte	.LFE38-.LFB38
+ 1351 0020 00000000 		.4byte	0
+ 1352 0024 00000000 		.4byte	0
+ 1353              		.section	.debug_ranges,"",%progbits
+ 1354              	.Ldebug_ranges0:
+ 1355 0000 00000000 		.4byte	.LFB37
+ 1356 0004 24000000 		.4byte	.LFE37
+ 1357 0008 00000000 		.4byte	.LFB38
+ 1358 000c 3C050000 		.4byte	.LFE38
+ 1359 0010 00000000 		.4byte	0
+ 1360 0014 00000000 		.4byte	0
+ 1361              		.section	.debug_line,"",%progbits
+ 1362              	.Ldebug_line0:
+ 1363 0000 68010000 		.section	.debug_str,"MS",%progbits,1
+ 1363      02004C00 
+ 1363      00000201 
+ 1363      FB0E0D00 
+ 1363      01010101 
+ 1364              	.LASF32:
+ 1365 0000 73616D70 		.ascii	"sample_lines\000"
+ 1365      6C655F6C 
+ 1365      696E6573 
+ 1365      00
+ 1366              	.LASF23:
+ 1367 000d 66697265 		.ascii	"fire_prev\000"
+ 1367      5F707265 
+ 1367      7600
+ 1368              	.LASF19:
+ 1369 0017 73746174 		.ascii	"state\000"
+ 1369      6500
+ 1370              	.LASF20:
+ 1371 001d 6C6F775F 		.ascii	"low_prev\000"
+ 1371      70726576 
+ 1371      00
+ 1372              	.LASF3:
+ 1373 0026 73686F72 		.ascii	"short unsigned int\000"
+ 1373      7420756E 
+ 1373      7369676E 
+ 1373      65642069 
+ 1373      6E7400
+ 1374              	.LASF21:
+ 1375 0039 6D65645F 		.ascii	"med_prev\000"
+ 1375      70726576 
+ 1375      00
+ 1376              	.LASF24:
+ 1377 0042 736C6F70 		.ascii	"slope_detect\000"
+ 1377      655F6465 
+ 1377      74656374 
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 31
+
+
+ 1377      00
+ 1378              	.LASF12:
+ 1379 004f 666C6F61 		.ascii	"float\000"
+ 1379      7400
+ 1380              	.LASF17:
+ 1381 0055 64617461 		.ascii	"data\000"
+ 1381      00
+ 1382              	.LASF1:
+ 1383 005a 756E7369 		.ascii	"unsigned char\000"
+ 1383      676E6564 
+ 1383      20636861 
+ 1383      7200
+ 1384              	.LASF25:
+ 1385 0068 6C6F775F 		.ascii	"low_count\000"
+ 1385      636F756E 
+ 1385      7400
+ 1386              	.LASF5:
+ 1387 0072 6C6F6E67 		.ascii	"long unsigned int\000"
+ 1387      20756E73 
+ 1387      69676E65 
+ 1387      6420696E 
+ 1387      7400
+ 1388              	.LASF9:
+ 1389 0084 75696E74 		.ascii	"uint8\000"
+ 1389      3800
+ 1390              	.LASF13:
+ 1391 008a 646F7562 		.ascii	"double\000"
+ 1391      6C6500
+ 1392              	.LASF37:
+ 1393 0091 6D61696E 		.ascii	"main\000"
+ 1393      00
+ 1394              	.LASF33:
+ 1395 0096 474E5520 		.ascii	"GNU C 4.9.3 20150303 (release) [ARM/embedded-4_9-br"
+ 1395      4320342E 
+ 1395      392E3320 
+ 1395      32303135 
+ 1395      30333033 
+ 1396 00c9 616E6368 		.ascii	"anch revision 221220] -mcpu=cortex-m0 -mthumb -g -O"
+ 1396      20726576 
+ 1396      6973696F 
+ 1396      6E203232 
+ 1396      31323230 
+ 1397 00fc 30202D66 		.ascii	"0 -ffunction-sections -ffat-lto-objects\000"
+ 1397      66756E63 
+ 1397      74696F6E 
+ 1397      2D736563 
+ 1397      74696F6E 
+ 1398              	.LASF16:
+ 1399 0124 68656164 		.ascii	"head\000"
+ 1399      00
+ 1400              	.LASF11:
+ 1401 0129 696E7438 		.ascii	"int8\000"
+ 1401      00
+ 1402              	.LASF10:
+ 1403 012e 75696E74 		.ascii	"uint32\000"
+ 1403      333200
+ 1404              	.LASF8:
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 32
+
+
+ 1405 0135 756E7369 		.ascii	"unsigned int\000"
+ 1405      676E6564 
+ 1405      20696E74 
+ 1405      00
+ 1406              	.LASF18:
+ 1407 0142 71756575 		.ascii	"queue_t\000"
+ 1407      655F7400 
+ 1408              	.LASF7:
+ 1409 014a 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 1409      206C6F6E 
+ 1409      6720756E 
+ 1409      7369676E 
+ 1409      65642069 
+ 1410              	.LASF36:
+ 1411 0161 496E7465 		.ascii	"InterruptHandler\000"
+ 1411      72727570 
+ 1411      7448616E 
+ 1411      646C6572 
+ 1411      00
+ 1412              	.LASF28:
+ 1413 0172 66697265 		.ascii	"fire_count\000"
+ 1413      5F636F75 
+ 1413      6E7400
+ 1414              	.LASF31:
+ 1415 017d 61637469 		.ascii	"activeLed\000"
+ 1415      76654C65 
+ 1415      6400
+ 1416              	.LASF27:
+ 1417 0187 68696768 		.ascii	"high_count\000"
+ 1417      5F636F75 
+ 1417      6E7400
+ 1418              	.LASF15:
+ 1419 0192 73697A65 		.ascii	"sizetype\000"
+ 1419      74797065 
+ 1419      00
+ 1420              	.LASF6:
+ 1421 019b 6C6F6E67 		.ascii	"long long int\000"
+ 1421      206C6F6E 
+ 1421      6720696E 
+ 1421      7400
+ 1422              	.LASF29:
+ 1423 01a9 6C697665 		.ascii	"liveness_count\000"
+ 1423      6E657373 
+ 1423      5F636F75 
+ 1423      6E7400
+ 1424              	.LASF34:
+ 1425 01b8 6D61696E 		.ascii	"main.c\000"
+ 1425      2E6300
+ 1426              	.LASF14:
+ 1427 01bf 63686172 		.ascii	"char\000"
+ 1427      00
+ 1428              	.LASF2:
+ 1429 01c4 73686F72 		.ascii	"short int\000"
+ 1429      7420696E 
+ 1429      7400
+ 1430              	.LASF22:
+ 1431 01ce 68696768 		.ascii	"high_prev\000"
+ARM GAS  C:\Users\Nick\AppData\Local\Temp\ccv0wtxN.s 			page 33
+
+
+ 1431      5F707265 
+ 1431      7600
+ 1432              	.LASF4:
+ 1433 01d8 6C6F6E67 		.ascii	"long int\000"
+ 1433      20696E74 
+ 1433      00
+ 1434              	.LASF35:
+ 1435 01e1 433A5C55 		.ascii	"C:\\Users\\Nick\\Documents\\PSoC Creator\\FSM.cywrk"
+ 1435      73657273 
+ 1435      5C4E6963 
+ 1435      6B5C446F 
+ 1435      63756D65 
+ 1436 020f 5C46534D 		.ascii	"\\FSM\\FSM.cydsn\000"
+ 1436      5C46534D 
+ 1436      2E637964 
+ 1436      736E00
+ 1437              	.LASF0:
+ 1438 021e 7369676E 		.ascii	"signed char\000"
+ 1438      65642063 
+ 1438      68617200 
+ 1439              	.LASF26:
+ 1440 022a 6D65645F 		.ascii	"med_count\000"
+ 1440      636F756E 
+ 1440      7400
+ 1441              	.LASF30:
+ 1442 0234 70726576 		.ascii	"prev_low_count\000"
+ 1442      5F6C6F77 
+ 1442      5F636F75 
+ 1442      6E7400
+ 1443              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 4.9.3 20150303 (release) [ARM/embedded-4_9-br
