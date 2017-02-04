@@ -24,11 +24,21 @@
 #include "filter.h"
 #include "print.h"
 #include "queue.h"
+#include "PWM.h"
+#include "IDAC.h"
+#include "adc.h"
+#include "PGA.h"
 
 /* LED control defines (active low)*/
 #define LIGHT_OFF                       (1u)
 #define LIGHT_ON                        (0u)
 #define SIZE 2000U
+
+#define LOW_FILT  0
+#define MID_FILT  1
+#define HIGH_FILT 2
+
+#define MIC_GAIN 68/2.2
 
 /* Selects the active blinking LED */
 uint8 activeLed;
@@ -52,6 +62,8 @@ CY_ISR(InterruptHandler)
         Timer_ClearInterrupt(Timer_INTR_MASK_TC);
         sample_lines = 1;        
     }
+    
+    
 }
 
 
@@ -62,20 +74,43 @@ int main()
         CySysWdtDisable();
     #endif /* (CY_PSOC4_4000) */
        
+    motor_Write(0);
     /* Enable global interrupt */
     CyGlobalIntEnable;
+    
+    UART_1_Start();
+    
+    PGA_set_gain(MIC_GAIN);
+    
+    /*enable ADC, PWM, and IDAC for threshold initialization */
+    init_PWM();
+    init_IDAC();
+    ADC_init();
+    
+    /*set comparator thresholds*/
+    CyDelay(5);
+    set_PWM_threshold(LOW_FILT);
+    set_PWM_threshold(MID_FILT);
+    set_PWM_threshold(HIGH_FILT);
+    set_IDAC_threshold();
+    
+    /*put ADC to sleep*/
+    ADC_sleep();
+    
     
     /* Enable interrupt component connected to interrupt */
     TC_CC_ISR_StartEx(InterruptHandler);
 
-    /* Start components */
+    /* Start sampling timer */
     Timer_Start();
+    
+    
     
     
     // The state of the FSM.
     uint8 state = 0;
     
-    UART_1_Start();
+    
 
     UART_1_UartPutString("\r\nTest Line\r\n");
     print_int(123);
@@ -103,7 +138,7 @@ int main()
     int prev_low_count;
     
     
-    int i = 0;
+    //int i = 0;
     
     init_queue(&low_prev);
     init_queue(&med_prev);
@@ -186,6 +221,10 @@ int main()
                         liveness_count = 0;
                         init_queue(&slope_detect);
                         LED_BLUE_Write(LIGHT_ON);
+                                                
+                        motor_Write(1);
+                        CyDelay(5000);
+                        motor_Write(0);
                     }
                     
                     break;
