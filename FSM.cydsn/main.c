@@ -62,8 +62,6 @@ CY_ISR(InterruptHandler)
         Timer_ClearInterrupt(Timer_INTR_MASK_TC);
         sample_lines = 1;        
     }
-    
-    
 }
 
 
@@ -96,39 +94,25 @@ int main()
     
     /*put ADC to sleep*/
     ADC_sleep();
-    
-    
+
     /* Enable interrupt component connected to interrupt */
     TC_CC_ISR_StartEx(InterruptHandler);
 
     /* Start sampling timer */
     Timer_Start();
-    
-    
-    
-    
+
     // The state of the FSM.
     uint8 state = 0;
     
-    
-
-    UART_1_UartPutString("\r\nTest Line\r\n");
-    print_int(123);
-    UART_1_UartPutString("\r\n");
-    print_int(12);
-    UART_1_UartPutString("\r\n");
-    print_int(100);
-    UART_1_UartPutString("\r\n");
-    print_int(1901);
-    UART_1_UartPutString("\r\n");
-    print_int(0);
-    UART_1_UartPutString("\r\n");
     
     queue_t low_prev;
     queue_t med_prev;
     queue_t high_prev;
     queue_t fire_prev;
     queue_t slope_detect;
+    queue_t low_deriv;
+    queue_t med_deriv;
+    queue_t high_deriv;
     
     int low_count;
     int med_count;
@@ -136,15 +120,16 @@ int main()
     int fire_count;
     int liveness_count;
     int prev_low_count;
-    
-    
-    //int i = 0;
+    int prev_med_count;
+    int prev_high_count;
     
     init_queue(&low_prev);
     init_queue(&med_prev);
     init_queue(&high_prev);
     init_queue(&fire_prev);
     init_queue(&slope_detect);
+    init_queue(&med_deriv);
+    init_queue(&high_deriv);
     
     for(;;) {
         if (sample_lines) {
@@ -175,18 +160,32 @@ int main()
                 // TODO break up count into helper functions, make new header file.
                 case 1:
                     prev_low_count = low_count;
+                    prev_med_count = med_count;
+                    prev_high_count = high_count;
                     low_count = filter_count(LOW_FILTER_INPUT_Read(), &low_prev, low_count);
                     med_count = filter_count(MED_FILTER_INPUT_Read(), &med_prev, med_count);
                     high_count = filter_count(HIGH_FILTER_INPUT_Read(), &high_prev, high_count);
                     fire_count = filter_count(FIRE_FILTER_INPUT_Read(), &fire_prev, fire_count);
                     push(&slope_detect, low_count - prev_low_count);
+                    push(&med_deriv, med_count - prev_med_count);
+                    push(&high_deriv, high_count - prev_high_count);
                     
-                    if ((sum(&slope_detect) == 0) && (peek(&slope_detect) != 0)) {
+                    // second derivative concavity test
+                    if ((sum(&slope_detect) == 0) && (peek(&slope_detect) == 1)) {
                         low_count = 0;
                         med_count = 0;
                         high_count = 0;
-                        prev_low_count = 0;
                     }
+                    
+                    // all filter negative first derivative test
+                    if ((sum(&slope_detect) == -6) && (sum(&med_deriv) == -6) && (sum(&high_deriv) == -6)) {
+                        low_count = 0;
+                        med_count = 0;
+                        high_count = 0;
+                    }
+                        
+                    
+                    
                     
                     UART_1_UartPutString("S1 ");
                     UART_1_UartPutString(" ");
@@ -204,7 +203,7 @@ int main()
                     UART_1_UartPutString("\r\n");             
                     
                     /* Check for fire alarm threshold. */
-                    if (fire_count > 100) {
+                    if (fire_count > 800) {
                         state = 5;
                         liveness_count = 0;
                         init_queue(&slope_detect);
@@ -212,7 +211,7 @@ int main()
                     }
                     
                     /* Check for siren threshold. */
-                    else if ((low_count > 50) && (med_count > 5) && (high_count < 5)) {
+                    else if ((low_count > 25) && (med_count > 5) && (high_count < 5) && (low_count >= med_count)) {
                         state = 2;
                         low_count = 0;
                         med_count = 0;
@@ -221,10 +220,6 @@ int main()
                         liveness_count = 0;
                         init_queue(&slope_detect);
                         LED_BLUE_Write(LIGHT_ON);
-                                                
-                        motor_Write(1);
-                        CyDelay(5000);
-                        motor_Write(0);
                     }
                     
                     break;
@@ -250,16 +245,11 @@ int main()
                     print_int(liveness_count);
                     UART_1_UartPutString("\r\n");
                     
-                    if (liveness_count > 120) {
-                        state = 0;
-                        low_count = 0;
-                        med_count = 0;
-                        high_count = 0;
-                        fire_count = 0;
-                        liveness_count = 0;                        
+                    if (liveness_count > 100) {
+                        state = 0;                    
                         LED_BLUE_Write(LIGHT_OFF);
                     }
-                    else if ((low_count < 50) && (med_count > 50) && (high_count > 5)) {
+                    else if ((low_count <= med_count) && (med_count > 20) && (med_count > high_count) && (high_count > 12)) {
                         state = 3;
                         low_count = 0;
                         med_count = 0;
@@ -287,7 +277,7 @@ int main()
                     print_int(liveness_count);
                     UART_1_UartPutString("\r\n");
                     
-                    if (liveness_count > 140) {
+                    if (liveness_count > 100) {
                         state = 0;
                         low_count = 0;
                         med_count = 0;
@@ -296,7 +286,7 @@ int main()
                         liveness_count = 0;
                         LED_BLUE_Write(LIGHT_OFF);
                     }
-                    else if ((low_count < 10) && (med_count < 30) && (high_count > 50)) {
+                    else if ((low_count < 20) && (med_count < 30) && (high_count > 95)) {
                         state = 4;
                         low_count = 0;
                         med_count = 0;
@@ -316,7 +306,7 @@ int main()
                     LED_GREEN_Write(LIGHT_OFF);
                     break;
                     
-                /* In this state, begin detection of the fire alarm.
+                /* In this state, indicate detection of the fire alarm.
                  */
                 case 5:
                     UART_1_UartPutString("Fire Alarm Detected\r\n");
@@ -325,12 +315,6 @@ int main()
                     while(!USER_INPUT_Read());
                     LED_RED_Write(LIGHT_OFF);
                     state = 0;                   
-                    break;
-                    
-                /* In this state, wait until user input to reset the
-                 * FSM.
-                 */
-                case 6:
                     break;
                     
                 default:
